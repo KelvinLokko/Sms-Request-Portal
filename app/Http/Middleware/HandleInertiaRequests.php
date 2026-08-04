@@ -35,11 +35,39 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $company = null;
+
+        if ($user !== null) {
+            // Reload missing attributes that factories / partial selects may omit under strict mode.
+            if (! array_key_exists('current_company_id', $user->getAttributes())) {
+                $user->refresh();
+            }
+
+            $companyModel = $user->currentCompany;
+            $company = $companyModel
+                ? [
+                    'id' => $companyModel->id,
+                    'name' => $companyModel->name,
+                    'status' => $companyModel->status->value,
+                    'status_label' => $companyModel->status->label(),
+                ]
+                : null;
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'roles' => $user?->getRoleNames()->values()->all() ?? [],
+                'isPlatformStaff' => $user?->isPlatformStaff() ?? false,
+                'company' => $company,
+                'companyRole' => $user?->companyRole()?->value,
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

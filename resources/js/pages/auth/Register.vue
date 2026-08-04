@@ -17,7 +17,7 @@ defineProps<{
 defineOptions({
     layout: {
         title: 'Create an account',
-        description: 'Enter your details below to create your account',
+        description: 'Register your company to submit SMS campaign requests',
     },
 });
 </script>
@@ -33,7 +33,7 @@ defineOptions({
     >
         <div class="grid gap-6">
             <div class="grid gap-2">
-                <Label for="name">Name</Label>
+                <Label for="name">Your name</Label>
                 <Input
                     id="name"
                     type="text"
@@ -48,12 +48,39 @@ defineOptions({
             </div>
 
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="company_name">Company name</Label>
+                <Input
+                    id="company_name"
+                    type="text"
+                    required
+                    :tabindex="2"
+                    autocomplete="organization"
+                    name="company_name"
+                    placeholder="Acme Ltd"
+                />
+                <InputError :message="errors.company_name" />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="company_phone">Company phone (optional)</Label>
+                <Input
+                    id="company_phone"
+                    type="tel"
+                    :tabindex="3"
+                    autocomplete="tel"
+                    name="company_phone"
+                    placeholder="0XXXXXXXXX"
+                />
+                <InputError :message="errors.company_phone" />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="email">Work email</Label>
                 <Input
                     id="email"
                     type="email"
                     required
-                    :tabindex="2"
+                    :tabindex="4"
                     autocomplete="email"
                     name="email"
                     placeholder="email@example.com"
@@ -66,7 +93,7 @@ defineOptions({
                 <PasswordInput
                     id="password"
                     required
-                    :tabindex="3"
+                    :tabindex="5"
                     autocomplete="new-password"
                     name="password"
                     placeholder="Password"
@@ -80,7 +107,7 @@ defineOptions({
                 <PasswordInput
                     id="password_confirmation"
                     required
-                    :tabindex="4"
+                    :tabindex="6"
                     autocomplete="new-password"
                     name="password_confirmation"
                     placeholder="Confirm password"
@@ -92,7 +119,7 @@ defineOptions({
             <Button
                 type="submit"
                 class="mt-2 w-full"
-                tabindex="5"
+                tabindex="7"
                 :disabled="processing"
                 data-test="register-user-button"
             >
@@ -106,7 +133,7 @@ defineOptions({
             <TextLink
                 :href="login()"
                 class="underline underline-offset-4"
-                :tabindex="6"
+                :tabindex="8"
                 >Log in</TextLink
             >
         </div>

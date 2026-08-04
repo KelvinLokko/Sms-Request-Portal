@@ -2,9 +2,15 @@
 
 namespace App\Providers;
 
+use App\Contracts\PaymentProvider;
+use App\Services\Payments\ManualPayment;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -15,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(PaymentProvider::class, ManualPayment::class);
     }
 
     /**
@@ -24,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiting();
     }
 
     /**
@@ -31,20 +38,41 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureDefaults(): void
     {
+        Model::shouldBeStrict();
+        Model::automaticallyEagerLoadRelationships();
+
         Date::use(CarbonImmutable::class);
 
         DB::prohibitDestructiveCommands(
-            app()->isProduction(),
+            $this->app->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
+        Password::defaults(function (): Password {
+            $rule = Password::min(12)
                 ->mixedCase()
-                ->letters()
                 ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+                ->symbols();
+
+            return $this->app->isProduction()
+                ? $rule->uncompromised()
+                : $rule;
+        });
+    }
+
+    /**
+     * Configure application rate limiters.
+     *
+     * Note: the "login" limiter (5/minute per email+IP) is registered in
+     * FortifyServiceProvider for Fortify compatibility.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('uploads', function (Request $request) {
+            return Limit::perMinute(10)->by((string) ($request->user()?->getAuthIdentifier() ?: $request->ip()));
+        });
+
+        RateLimiter::for('downloads', function (Request $request) {
+            return Limit::perMinute(30)->by((string) ($request->user()?->getAuthIdentifier() ?: $request->ip()));
+        });
     }
 }

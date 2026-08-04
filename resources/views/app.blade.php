@@ -1,17 +1,19 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'light') == 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#0B1F33">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
+        {{-- Light-first: only apply dark when explicitly chosen --}}
         <script>
             (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
+                const appearance = '{{ $appearance ?? "light" }}';
 
-                if (appearance === 'system') {
+                if (appearance === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else if (appearance === 'system') {
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
                     if (prefersDark) {
                         document.documentElement.classList.add('dark');
                     }
@@ -19,14 +21,13 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
-                background-color: oklch(1 0 0);
+                background-color: hsl(200 33% 97%);
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: hsl(205 45% 9%);
             }
         </style>
 
@@ -38,7 +39,7 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ config('app.name', 'SMS Client Portal') }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

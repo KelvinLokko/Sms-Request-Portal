@@ -10,8 +10,19 @@ export type User = {
     [key: string]: unknown;
 };
 
+export type AuthCompany = {
+    id: number;
+    name: string;
+    status: string;
+    status_label: string;
+};
+
 export type Auth = {
     user: User;
+    roles: string[];
+    isPlatformStaff: boolean;
+    company: AuthCompany | null;
+    companyRole: string | null;
 };
 
 /* @chisel-passkeys */

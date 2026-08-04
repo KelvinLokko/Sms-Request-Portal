@@ -35,10 +35,10 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
             description="Manage your profile and account settings"
         />
 
-        <div class="flex flex-col lg:flex-row lg:space-x-12">
-            <aside class="w-full max-w-xl lg:w-48">
+        <div class="flex flex-col gap-8 lg:flex-row lg:gap-12">
+            <aside class="w-full max-w-xl lg:w-52">
                 <nav
-                    class="flex flex-col space-y-1 space-x-0"
+                    class="flex flex-col gap-1 rounded-2xl border border-border/80 bg-card p-2 shadow-sm shadow-ink/5"
                     aria-label="Settings"
                 >
                     <Button
@@ -46,8 +46,11 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                         :key="toUrl(item.href)"
                         variant="ghost"
                         :class="[
-                            'w-full justify-start',
-                            { 'bg-muted': isCurrentOrParentUrl(item.href) },
+                            'w-full justify-start rounded-xl',
+                            {
+                                'bg-accent text-accent-foreground':
+                                    isCurrentOrParentUrl(item.href),
+                            },
                         ]"
                         as-child
                     >
@@ -59,7 +62,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                 </nav>
             </aside>
 
-            <Separator class="my-6 lg:hidden" />
+            <Separator class="lg:hidden" />
 
             <div class="flex-1 md:max-w-2xl">
                 <section class="max-w-xl space-y-12">

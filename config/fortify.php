@@ -77,6 +77,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Redirect Paths
+    |--------------------------------------------------------------------------
+    |
+    | Named Fortify operations can override the default home path. Logout
+    | sends guests to the login screen rather than the marketing home page.
+    |
+    */
+
+    'redirects' => [
+        'logout' => '/login',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Fortify Routes Prefix / Subdomain
     |--------------------------------------------------------------------------
     |
