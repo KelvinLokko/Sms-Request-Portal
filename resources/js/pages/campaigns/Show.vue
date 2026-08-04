@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import CampaignController from '@/actions/App/Http/Controllers/CampaignController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -9,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { index } from '@/routes/campaigns';
+import { download as downloadTemplateRoute } from '@/routes/campaigns/templates';
 
 type Campaign = {
     id: number;
@@ -76,8 +76,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 
 function submitCampaign() {
     if (!confirm('Submit this campaign for review? The quote will be frozen.')) {
@@ -100,6 +98,10 @@ function toLocalInput(value: string | null): string {
     const date = new Date(value);
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function downloadTemplateUrl(type: 'bulk' | 'personalised-bulk'): string {
+    return downloadTemplateRoute.url(type);
 }
 </script>
 
@@ -128,14 +130,6 @@ function toLocalInput(value: string | null): string {
                 </Button>
             </div>
         </div>
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div
             v-if="campaign.changes_requested_reason"
@@ -259,42 +253,53 @@ function toLocalInput(value: string | null): string {
                     />
                     <InputError :message="errors.message_body" />
                 </div>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label for="encoding">Encoding</Label>
-                        <select
-                            id="encoding"
-                            name="encoding"
-                            class="h-9 rounded-md border bg-background px-3 text-sm"
-                            :value="campaign.encoding"
+                <fieldset class="grid gap-3">
+                    <legend class="text-sm font-medium">Campaign type</legend>
+                    <label class="flex items-start gap-3 text-sm">
+                        <input
+                            type="radio"
+                            name="campaign_type"
+                            value="bulk"
+                            class="mt-1"
+                            :checked="!campaign.is_personalised"
+                            required
+                        />
+                        <span>
+                            <span class="font-medium">Bulk</span>
+                            — same message for every contact
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 text-sm">
+                        <input
+                            type="radio"
+                            name="campaign_type"
+                            value="personalised_bulk"
+                            class="mt-1"
+                            :checked="campaign.is_personalised"
+                        />
+                        <span>
+                            <span class="font-medium">Personalised bulk</span>
+                            — uses
+                            <code class="rounded bg-muted px-1">[HEADER]</code>
+                            placeholders
+                        </span>
+                    </label>
+                    <InputError :message="errors.campaign_type" />
+                    <p class="text-sm">
+                        <a
+                            :href="
+                                downloadTemplateUrl(
+                                    campaign.is_personalised
+                                        ? 'personalised-bulk'
+                                        : 'bulk',
+                                )
+                            "
+                            class="font-medium text-primary underline underline-offset-4"
                         >
-                            <option value="text">Text (GSM)</option>
-                            <option value="unicode">Unicode</option>
-                        </select>
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="flash_type">Message type</Label>
-                        <select
-                            id="flash_type"
-                            name="flash_type"
-                            class="h-9 rounded-md border bg-background px-3 text-sm"
-                            :value="campaign.flash_type"
-                        >
-                            <option value="text">Standard</option>
-                            <option value="flash">Flash</option>
-                        </select>
-                    </div>
-                </div>
-                <label class="flex items-start gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        name="is_personalised"
-                        value="1"
-                        class="mt-1"
-                        :checked="campaign.is_personalised"
-                    />
-                    <span>Personalised message</span>
-                </label>
+                            Download CSV template
+                        </a>
+                    </p>
+                </fieldset>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
                         <Label for="requested_send_at">Requested send time</Label>
@@ -304,6 +309,7 @@ function toLocalInput(value: string | null): string {
                             type="datetime-local"
                             :default-value="toLocalInput(campaign.requested_send_at)"
                         />
+                        <InputError :message="errors.requested_send_at" />
                     </div>
                     <div class="grid gap-2">
                         <Label for="hard_deadline_at">Hard deadline</Label>
@@ -313,6 +319,7 @@ function toLocalInput(value: string | null): string {
                             type="datetime-local"
                             :default-value="toLocalInput(campaign.hard_deadline_at)"
                         />
+                        <InputError :message="errors.hard_deadline_at" />
                     </div>
                 </div>
                 <Button type="submit" :disabled="processing">
@@ -397,7 +404,25 @@ function toLocalInput(value: string | null): string {
                         required
                     />
                     <p class="text-xs text-muted-foreground">
-                        Include a header row. Prefer a
+                        Use the
+                        <a
+                            :href="
+                                downloadTemplateUrl(
+                                    campaign.is_personalised
+                                        ? 'personalised-bulk'
+                                        : 'bulk',
+                                )
+                            "
+                            class="underline underline-offset-4"
+                        >
+                            {{
+                                campaign.is_personalised
+                                    ? 'personalised bulk'
+                                    : 'bulk'
+                            }}
+                            template
+                        </a>
+                        so columns match your campaign type. Prefer a
                         <code class="rounded bg-muted px-1">phone</code>
                         column. Save Excel columns as Text to avoid number
                         corruption.

@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Enums\CompanyUserRole;
 use App\Enums\PaymentStatus;
-use App\Enums\PlatformRole;
+use App\Enums\PlatformPermission;
 use App\Models\Payment;
 use App\Models\User;
 
@@ -12,20 +12,13 @@ class PaymentPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]) || $user->currentCompanyId() !== null;
+        return $user->can(PlatformPermission::PaymentsManage->value)
+            || $user->currentCompanyId() !== null;
     }
 
     public function view(User $user, Payment $payment): bool
     {
-        if ($user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ])) {
+        if ($user->can(PlatformPermission::PaymentsManage->value)) {
             return true;
         }
 
@@ -49,11 +42,8 @@ class PaymentPolicy
 
     public function verify(User $user, Payment $payment): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]) && $payment->status === PaymentStatus::Pending;
+        return $user->can(PlatformPermission::PaymentsManage->value)
+            && $payment->status === PaymentStatus::Pending;
     }
 
     public function reject(User $user, Payment $payment): bool

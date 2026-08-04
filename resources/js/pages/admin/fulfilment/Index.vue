@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import FulfilmentController from '@/actions/App/Http/Controllers/Admin/FulfilmentController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -33,8 +33,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 const filter = ref(props.filters.filter);
 
 function applyFilter() {
@@ -61,14 +59,6 @@ function formatWhen(value: string | null): string {
             title="Fulfilment"
             description="Paid campaigns ready to send in Deywuro. Download the cleaned list, copy the message, then mark as sent."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="flex flex-wrap items-end gap-3">
             <label class="flex flex-col gap-1 text-sm">

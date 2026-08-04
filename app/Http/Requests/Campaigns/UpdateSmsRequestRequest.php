@@ -19,6 +19,19 @@ class UpdateSmsRequestRequest extends FormRequest
         return $this->user()?->can('update', $smsRequest) ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $campaignType = $this->input('campaign_type');
+
+        $this->merge([
+            'encoding' => $this->input('encoding', MessageEncoding::Text->value),
+            'flash_type' => $this->input('flash_type', MessageFlashType::Text->value),
+            'is_personalised' => $campaignType === null
+                ? $this->boolean('is_personalised')
+                : $campaignType === 'personalised_bulk',
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -29,6 +42,7 @@ class UpdateSmsRequestRequest extends FormRequest
         return [
             'name' => ['nullable', 'string', 'max:255'],
             'message_body' => ['nullable', 'string', 'max:'.SegmentCounter::MAX_MESSAGE_LENGTH],
+            'campaign_type' => ['required', Rule::in(['bulk', 'personalised_bulk'])],
             'encoding' => ['required', Rule::enum(MessageEncoding::class)],
             'flash_type' => ['required', Rule::enum(MessageFlashType::class)],
             'is_personalised' => ['sometimes', 'boolean'],
@@ -40,7 +54,25 @@ class UpdateSmsRequestRequest extends FormRequest
                 ),
             ],
             'requested_send_at' => ['nullable', 'date'],
-            'hard_deadline_at' => ['nullable', 'date', 'after:requested_send_at'],
+            'hard_deadline_at' => [
+                'nullable',
+                'date',
+                Rule::when(
+                    $this->filled('requested_send_at'),
+                    ['after_or_equal:requested_send_at'],
+                ),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'campaign_type.required' => 'Choose Bulk or Personalised bulk.',
+            'hard_deadline_at.after_or_equal' => 'Hard deadline must be on or after the requested send time.',
         ];
     }
 }

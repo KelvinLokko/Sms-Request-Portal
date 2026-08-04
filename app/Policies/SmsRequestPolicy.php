@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\CompanyUserRole;
-use App\Enums\PlatformRole;
+use App\Enums\PlatformPermission;
 use App\Enums\SmsRequestStatus;
 use App\Models\SmsRequest;
 use App\Models\User;
@@ -57,10 +57,7 @@ class SmsRequestPolicy
     public function cancel(User $user, SmsRequest $smsRequest): bool
     {
         if ($user->isPlatformStaff()) {
-            return $user->hasAnyRole([
-                PlatformRole::SuperAdmin->value,
-                PlatformRole::Admin->value,
-            ]);
+            return $user->can(PlatformPermission::CampaignsCancel->value);
         }
 
         if ($user->currentCompanyId() !== $smsRequest->company_id) {
@@ -86,11 +83,7 @@ class SmsRequestPolicy
 
     public function review(User $user, SmsRequest $smsRequest): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Support->value,
-        ]);
+        return $user->can(PlatformPermission::CampaignsReview->value);
     }
 
     public function requestChanges(User $user, SmsRequest $smsRequest): bool
@@ -109,35 +102,26 @@ class SmsRequestPolicy
 
     public function issueInvoice(User $user, SmsRequest $smsRequest): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]) && in_array($smsRequest->status, [
-            SmsRequestStatus::Submitted,
-            SmsRequestStatus::UnderReview,
-        ], true);
+        return $user->can(PlatformPermission::CampaignsInvoice->value)
+            && in_array($smsRequest->status, [
+                SmsRequestStatus::Submitted,
+                SmsRequestStatus::UnderReview,
+            ], true);
     }
 
     public function fulfil(User $user, SmsRequest $smsRequest): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Support->value,
-        ]) && $smsRequest->status->canFulfil();
+        return $user->can(PlatformPermission::CampaignsFulfil->value)
+            && $smsRequest->status->canFulfil();
     }
 
     public function downloadCleanedRecipients(User $user, SmsRequest $smsRequest): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Support->value,
-        ]) && in_array($smsRequest->status, [
-            SmsRequestStatus::Paid,
-            SmsRequestStatus::AwaitingFulfilment,
-            SmsRequestStatus::Fulfilled,
-        ], true);
+        return $user->can(PlatformPermission::CampaignsFulfil->value)
+            && in_array($smsRequest->status, [
+                SmsRequestStatus::Paid,
+                SmsRequestStatus::AwaitingFulfilment,
+                SmsRequestStatus::Fulfilled,
+            ], true);
     }
 }

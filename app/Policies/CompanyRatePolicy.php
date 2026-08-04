@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Enums\PlatformRole;
+use App\Enums\PlatformPermission;
 use App\Models\CompanyRate;
 use App\Models\User;
 
@@ -10,11 +10,7 @@ class CompanyRatePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]);
+        return $user->can(PlatformPermission::RatesManage->value);
     }
 
     public function view(User $user, CompanyRate $companyRate): bool
@@ -29,10 +25,6 @@ class CompanyRatePolicy
 
     public function create(User $user): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]);
+        return $user->can(PlatformPermission::RatesManage->value);
     }
 }

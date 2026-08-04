@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Form, Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Form, Head, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import CampaignReviewController from '@/actions/App/Http/Controllers/Admin/CampaignReviewController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -58,8 +58,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 const changesReason = ref('');
 const rejectionReason = ref('');
 
@@ -83,14 +81,6 @@ function issueInvoice() {
             :title="campaign.reference"
             :description="`${campaign.status_label} · ${campaign.company.name}`"
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="flex flex-wrap gap-2">
             <Button v-if="can.start_review" @click="startReview">

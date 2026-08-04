@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Form, Head } from '@inertiajs/vue3';
 import TaxRateController from '@/actions/App/Http/Controllers/Admin/TaxRateController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -28,8 +27,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 </script>
 
 <template>
@@ -40,14 +37,6 @@ const flashSuccess = computed(() => page.props.flash?.success);
             title="Tax rates"
             description="Configurable tax lines applied at invoice time. Keep inactive until the real levy structure is confirmed."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <Form
             v-bind="TaxRateController.store.form()"

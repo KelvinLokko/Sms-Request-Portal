@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\PlatformRole;
+use App\Enums\PlatformPermission;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\SmsRequest;
@@ -20,7 +20,7 @@ class CampaignNotifier
     public function submitted(SmsRequest $request): void
     {
         Notification::send(
-            $this->staff([PlatformRole::SuperAdmin, PlatformRole::Admin, PlatformRole::Support]),
+            $this->staffWith(PlatformPermission::CampaignsReview),
             new CampaignSubmittedNotification($request),
         );
     }
@@ -44,7 +44,7 @@ class CampaignNotifier
     public function paymentReceived(Payment $payment): void
     {
         Notification::send(
-            $this->staff([PlatformRole::SuperAdmin, PlatformRole::Admin, PlatformRole::Finance]),
+            $this->staffWith(PlatformPermission::PaymentsManage),
             new PaymentReceivedNotification($payment),
         );
     }
@@ -58,16 +58,11 @@ class CampaignNotifier
     }
 
     /**
-     * @param  list<PlatformRole>  $roles
      * @return Collection<int, User>
      */
-    private function staff(array $roles): Collection
+    private function staffWith(PlatformPermission $permission): Collection
     {
-        $names = array_map(fn (PlatformRole $role) => $role->value, $roles);
-
-        return User::query()
-            ->whereHas('roles', fn ($query) => $query->whereIn('name', $names))
-            ->get();
+        return User::permission($permission->value)->get();
     }
 
     /**

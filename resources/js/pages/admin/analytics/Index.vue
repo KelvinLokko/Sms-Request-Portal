@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import {
     BarController,
     BarElement,
@@ -60,8 +60,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 
 const revenueCanvas = ref<HTMLCanvasElement | null>(null);
 const requestsCanvas = ref<HTMLCanvasElement | null>(null);
@@ -178,16 +176,8 @@ onBeforeUnmount(destroyCharts);
     <div class="flex flex-col gap-6 p-4">
         <Heading
             title="Analytics"
-            :description="`Aggregates from ${range.from} to ${range.to}. Values computed in SQL.`"
+            :description="`Live database totals from ${range.from} to ${range.to} (invoices, campaigns, and payments — not demo charts).`"
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <div class="rounded-xl border p-4">

@@ -12,10 +12,7 @@ class ActivityLogController extends Controller
 {
     public function index(Request $request): Response
     {
-        abort_unless($request->user()?->hasAnyRole([
-            'super-admin',
-            'admin',
-        ]), 403);
+        abort_unless($request->user()?->can('activity.view'), 403);
 
         $logs = ActivityLog::query()
             ->with(['user:id,name,email', 'company:id,name'])

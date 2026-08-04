@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { index, show } from '@/routes/invoices';
@@ -26,8 +25,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 </script>
 
 <template>
@@ -38,14 +35,6 @@ const flashSuccess = computed(() => page.props.flash?.success);
             title="Invoices"
             description="Issued invoices for your SMS campaign requests."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="overflow-x-auto rounded-xl border">
             <table class="w-full min-w-[40rem] text-left text-sm">

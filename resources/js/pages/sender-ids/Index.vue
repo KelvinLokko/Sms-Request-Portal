@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { create, destroy, edit, index } from '@/routes/sender-ids';
@@ -32,8 +31,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 
 function deleteSenderId(id: number) {
     if (!confirm('Delete this sender ID?')) {
@@ -57,14 +54,6 @@ function deleteSenderId(id: number) {
                 <Link :href="create()">Register sender ID</Link>
             </Button>
         </div>
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="overflow-x-auto rounded-xl border">
             <table class="w-full min-w-[32rem] text-left text-sm">

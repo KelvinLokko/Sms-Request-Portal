@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Form, Head } from '@inertiajs/vue3';
 import CompanyRateController from '@/actions/App/Http/Controllers/Admin/CompanyRateController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -29,8 +28,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 </script>
 
 <template>
@@ -41,14 +38,6 @@ const flashSuccess = computed(() => page.props.flash?.success);
             title="SMS rates"
             description="Platform default and per-company overrides. Historical invoices use the rate effective on the invoice date."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <Form
             v-bind="CompanyRateController.store.form()"

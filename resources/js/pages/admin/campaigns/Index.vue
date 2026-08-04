@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import CampaignReviewController from '@/actions/App/Http/Controllers/Admin/CampaignReviewController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -32,8 +32,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 const statusFilter = ref(props.filters.status);
 
 function applyFilter() {
@@ -53,14 +51,6 @@ function applyFilter() {
             title="Campaign review"
             description="Review submitted campaigns, request changes, reject blocked content, or issue an invoice."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="flex flex-wrap items-end gap-3">
             <label class="flex flex-col gap-1 text-sm">

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { index } from '@/routes/admin/activity';
 
@@ -26,8 +25,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 
 function formatWhen(value: string): string {
     return new Date(value).toLocaleString();
@@ -42,14 +39,6 @@ function formatWhen(value: string): string {
             title="Audit log"
             description="Append-only record of privileged actions with actor, IP, and before/after state."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="overflow-x-auto rounded-xl border">
             <table class="w-full min-w-[52rem] text-left text-sm">

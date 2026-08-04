@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Enums\CompanyUserRole;
 use App\Enums\InvoiceStatus;
-use App\Enums\PlatformRole;
+use App\Enums\PlatformPermission;
 use App\Models\Invoice;
 use App\Models\User;
 
@@ -50,10 +50,6 @@ class InvoicePolicy
 
     public function issue(User $user): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]);
+        return $user->can(PlatformPermission::CampaignsInvoice->value);
     }
 }

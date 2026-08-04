@@ -61,6 +61,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
                 'roles' => $user?->getRoleNames()->values()->all() ?? [],
+                'permissions' => $user?->getAllPermissions()->pluck('name')->values()->all() ?? [],
                 'isPlatformStaff' => $user?->isPlatformStaff() ?? false,
                 'company' => $company,
                 'companyRole' => $user?->companyRole()?->value,

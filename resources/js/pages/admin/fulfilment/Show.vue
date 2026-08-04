@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import FulfilmentController from '@/actions/App/Http/Controllers/Admin/FulfilmentController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -50,8 +50,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 const copyStatus = ref('');
 const jobReference = ref('');
 
@@ -97,14 +95,6 @@ function formatWhen(value: string | null): string {
             :title="campaign.reference"
             :description="`${campaign.status_label} · ${campaign.company.name}`"
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <p
             v-if="copyStatus"

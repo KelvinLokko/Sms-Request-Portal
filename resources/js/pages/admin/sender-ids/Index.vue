@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import SenderIdReviewController from '@/actions/App/Http/Controllers/Admin/SenderIdReviewController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -27,8 +27,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 const rejectReason = ref<Record<number, string>>({});
 
 function approve(id: number) {
@@ -55,14 +53,6 @@ function reject(id: number) {
             title="Sender ID review"
             description="Approve sender IDs before clients can use them on campaign requests."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="overflow-x-auto rounded-xl border">
             <table class="w-full min-w-[40rem] text-left text-sm">

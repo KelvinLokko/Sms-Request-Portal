@@ -22,6 +22,14 @@ use Tests\Concerns\CreatesCompanies;
 
 uses(CreatesCompanies::class);
 
+function fakeRecipientCsv(string $name = 'contacts.csv'): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent(
+        $name,
+        "phone\n0244123456\n0244987654\n",
+    );
+}
+
 it('counts segments with the 8-tier Deywuro table', function () {
     expect(SegmentCounter::pages(1))->toBe(1)
         ->and(SegmentCounter::pages(160))->toBe(1)
@@ -65,6 +73,7 @@ it('forbids unapproved companies from listing campaigns', function () {
 });
 
 it('lets an approved owner create a draft campaign', function () {
+    Queue::fake();
     CompanyRate::factory()->create(['rate_per_sms' => '0.030000']);
     [$user, $company] = $this->createApprovedCompanyOwner();
 
@@ -78,9 +87,9 @@ it('lets an approved owner create a draft campaign', function () {
         ->post(route('campaigns.store'), [
             'name' => 'Promo',
             'message_body' => 'Hello customers',
-            'encoding' => 'text',
-            'flash_type' => 'text',
+            'campaign_type' => 'bulk',
             'sender_id_id' => $sender->id,
+            'file' => fakeRecipientCsv(),
         ])
         ->assertRedirect();
 
@@ -88,7 +97,65 @@ it('lets an approved owner create a draft campaign', function () {
     expect($campaign)->not->toBeNull()
         ->and($campaign->status)->toBe(SmsRequestStatus::Draft)
         ->and($campaign->pages)->toBe(1)
-        ->and($campaign->company_id)->toBe($company->id);
+        ->and($campaign->is_personalised)->toBeFalse()
+        ->and($campaign->company_id)->toBe($company->id)
+        ->and(RecipientList::query()->where('sms_request_id', $campaign->id)->count())->toBe(1);
+
+    Queue::assertPushed(ValidateRecipientListJob::class);
+});
+
+it('creates a personalised bulk draft and serves recipient templates', function () {
+    Queue::fake();
+    [$user, $company] = $this->createApprovedCompanyOwner();
+
+    $this->actingAs($user)
+        ->post(route('campaigns.store'), [
+            'name' => 'Personal',
+            'message_body' => 'Hello [Name]',
+            'campaign_type' => 'personalised_bulk',
+            'file' => fakeRecipientCsv('personal.csv'),
+        ])
+        ->assertRedirect();
+
+    expect(SmsRequest::query()->first()?->is_personalised)->toBeTrue();
+
+    $this->actingAs($user)
+        ->get(route('campaigns.templates.download', ['type' => 'bulk']))
+        ->assertOk()
+        ->assertHeader('content-disposition');
+
+    $this->actingAs($user)
+        ->get(route('campaigns.templates.download', ['type' => 'personalised-bulk']))
+        ->assertOk();
+});
+
+it('allows equal requested send time and hard deadline on draft create', function () {
+    Queue::fake();
+    [$user] = $this->createApprovedCompanyOwner();
+    $when = now()->addDay()->seconds(0);
+
+    $this->actingAs($user)
+        ->post(route('campaigns.store'), [
+            'message_body' => 'Hello',
+            'campaign_type' => 'bulk',
+            'requested_send_at' => $when->format('Y-m-d\\TH:i'),
+            'hard_deadline_at' => $when->format('Y-m-d\\TH:i'),
+            'file' => fakeRecipientCsv(),
+        ])
+        ->assertRedirect();
+
+    expect(SmsRequest::query()->count())->toBe(1);
+});
+
+it('requires a recipient list when creating a campaign', function () {
+    [$user] = $this->createApprovedCompanyOwner();
+
+    $this->actingAs($user)
+        ->post(route('campaigns.store'), [
+            'message_body' => 'Hello',
+            'campaign_type' => 'bulk',
+        ])
+        ->assertSessionHasErrors('file');
 });
 
 it('validates a recipient csv and counts billable rows', function () {

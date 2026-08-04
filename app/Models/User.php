@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CompanyUserRole;
+use App\Enums\PlatformPermission;
 use App\Enums\PlatformRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -71,7 +72,13 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 
     public function isPlatformStaff(): bool
     {
-        return $this->hasAnyRole(PlatformRole::values());
+        return $this->can(PlatformPermission::AdminAccess->value)
+            || $this->hasAnyRole(PlatformRole::values());
+    }
+
+    public function hasPlatformPermission(PlatformPermission $permission): bool
+    {
+        return $this->can($permission->value);
     }
 
     public function currentCompanyId(): ?int

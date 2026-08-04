@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import PaymentReviewController from '@/actions/App/Http/Controllers/Admin/PaymentReviewController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
-import { index } from '@/routes/admin/payments';
+import { index, report } from '@/routes/admin/payments';
 
 type Row = {
     id: number;
@@ -35,8 +35,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 const rejectReason = ref<Record<number, string>>({});
 
 function verify(id: number) {
@@ -62,19 +60,15 @@ function reject(id: number) {
     <Head title="Payment verification" />
 
     <div class="flex flex-col gap-6 p-4">
-        <Heading
-            title="Payment verification"
-            description="Verify Mobile Money references submitted against open invoices."
-        />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
-
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Payment verification"
+                description="Verify Mobile Money references submitted against open invoices."
+            />
+            <Button as-child variant="outline">
+                <Link :href="report()">Payment history</Link>
+            </Button>
+        </div>
         <div class="overflow-x-auto rounded-xl border">
             <table class="w-full min-w-[52rem] text-left text-sm">
                 <thead class="border-b bg-muted/40">

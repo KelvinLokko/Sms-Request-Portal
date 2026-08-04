@@ -20,6 +20,7 @@ use App\Support\Sms\SegmentCounter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -60,11 +61,23 @@ class CampaignController extends Controller
         $company = $user->currentCompany;
         abort_if($company === null, 403);
 
-        $campaign = $service->createDraft($user, $company, $request->validated());
+        $campaign = $service->createDraft(
+            $user,
+            $company,
+            collect($request->validated())
+                ->except(['file', 'campaign_type', 'phone_column'])
+                ->all(),
+        );
+
+        $this->storeRecipientList(
+            $campaign,
+            $request->file('file'),
+            $request->validated('phone_column'),
+        );
 
         return redirect()
             ->route('campaigns.show', $campaign)
-            ->with('success', 'Draft campaign created.');
+            ->with('success', 'Draft created. Recipient list uploaded — validation is running.');
     }
 
     public function show(SmsRequest $campaign): Response
@@ -132,7 +145,25 @@ class CampaignController extends Controller
         UploadRecipientListRequest $request,
         SmsRequest $campaign,
     ): RedirectResponse {
-        $file = $request->file('file');
+        $this->storeRecipientList(
+            $campaign,
+            $request->file('file'),
+            $request->validated('phone_column'),
+        );
+
+        return redirect()
+            ->route('campaigns.show', $campaign)
+            ->with('success', 'Recipient list uploaded. Validation is running.');
+    }
+
+    /**
+     * Persist an uploaded recipient file and queue validation.
+     */
+    private function storeRecipientList(
+        SmsRequest $campaign,
+        UploadedFile $file,
+        ?string $phoneColumn = null,
+    ): RecipientList {
         $companyId = $campaign->company_id;
         $extension = strtolower($file->getClientOriginalExtension());
         $path = $file->storeAs(
@@ -141,6 +172,11 @@ class CampaignController extends Controller
             'local',
         );
 
+        // Replace any previous list on re-upload from the detail page.
+        RecipientList::query()
+            ->where('sms_request_id', $campaign->id)
+            ->delete();
+
         $list = RecipientList::query()->create([
             'sms_request_id' => $campaign->id,
             'company_id' => $companyId,
@@ -148,14 +184,12 @@ class CampaignController extends Controller
             'original_filename' => $file->getClientOriginalName(),
             'mime_type' => $file->getClientMimeType(),
             'status' => RecipientListStatus::Pending,
-            'phone_column' => $request->validated('phone_column'),
+            'phone_column' => $phoneColumn,
         ]);
 
         ValidateRecipientListJob::dispatch($list->id);
 
-        return redirect()
-            ->route('campaigns.show', $campaign)
-            ->with('success', 'Recipient list uploaded. Validation is running.');
+        return $list;
     }
 
     public function downloadRejected(SmsRequest $campaign): StreamedResponse
@@ -169,6 +203,38 @@ class CampaignController extends Controller
         return Storage::disk('local')->download(
             $list->rejected_export_path,
             'rejected-'.$campaign->reference.'.csv',
+        );
+    }
+
+    public function downloadTemplate(string $type): StreamedResponse
+    {
+        $this->authorize('create', SmsRequest::class);
+
+        $templates = [
+            'bulk' => [
+                'path' => resource_path('templates/recipients/bulk.csv'),
+                'filename' => 'bulk-recipients-template.csv',
+            ],
+            'personalised-bulk' => [
+                'path' => resource_path('templates/recipients/personalised-bulk.csv'),
+                'filename' => 'personalised-bulk-recipients-template.csv',
+            ],
+        ];
+
+        abort_unless(isset($templates[$type]), 404);
+
+        $path = $templates[$type]['path'];
+        abort_unless(is_file($path), 404);
+
+        return response()->streamDownload(
+            static function () use ($path): void {
+                $handle = fopen($path, 'rb');
+                abort_if($handle === false, 500);
+                fpassthru($handle);
+                fclose($handle);
+            },
+            $templates[$type]['filename'],
+            ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
     }
 

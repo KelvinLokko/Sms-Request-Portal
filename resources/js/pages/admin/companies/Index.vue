@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import CompanyController from '@/actions/App/Http/Controllers/Admin/CompanyController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -29,8 +29,6 @@ defineOptions({
     },
 });
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash?.success);
 const rejectReason = ref<Record<number, string>>({});
 
 function filterStatus(status: string | null) {
@@ -66,14 +64,6 @@ function suspend(id: number) {
             title="Companies"
             description="Approve or reject company registrations before they can submit campaigns."
         />
-
-        <p
-            v-if="flashSuccess"
-            class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm"
-            role="status"
-        >
-            {{ flashSuccess }}
-        </p>
 
         <div class="flex flex-wrap gap-2">
             <Button

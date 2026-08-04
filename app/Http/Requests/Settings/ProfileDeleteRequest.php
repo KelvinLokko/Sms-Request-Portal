@@ -10,6 +10,12 @@ class ProfileDeleteRequest extends FormRequest
 {
     use PasswordValidationRules;
 
+    public function authorize(): bool
+    {
+        // Account self-deletion is disabled; admins remove other users via User management.
+        return false;
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *

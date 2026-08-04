@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Enums\PlatformRole;
+use App\Enums\PlatformPermission;
 use App\Models\SenderId;
 use App\Models\User;
 
@@ -60,10 +60,6 @@ class SenderIdPolicy
 
     public function review(User $user, SenderId $senderId): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Support->value,
-        ]);
+        return $user->can(PlatformPermission::SenderIdsReview->value);
     }
 }

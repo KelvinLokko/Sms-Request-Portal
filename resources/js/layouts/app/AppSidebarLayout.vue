@@ -22,6 +22,6 @@ withDefaults(defineProps<Props>(), {
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </AppContent>
-        <Toaster />
+        <Toaster position="top-right" :rich-colors="true" :close-button="true" />
     </AppShell>
 </template>

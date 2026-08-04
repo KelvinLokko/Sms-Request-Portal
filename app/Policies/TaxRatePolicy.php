@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Enums\PlatformRole;
+use App\Enums\PlatformPermission;
 use App\Models\TaxRate;
 use App\Models\User;
 
@@ -10,11 +10,7 @@ class TaxRatePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]);
+        return $user->can(PlatformPermission::TaxRatesManage->value);
     }
 
     public function view(User $user, TaxRate $taxRate): bool
@@ -24,11 +20,7 @@ class TaxRatePolicy
 
     public function create(User $user): bool
     {
-        return $user->hasAnyRole([
-            PlatformRole::SuperAdmin->value,
-            PlatformRole::Admin->value,
-            PlatformRole::Finance->value,
-        ]);
+        return $user->can(PlatformPermission::TaxRatesManage->value);
     }
 
     public function update(User $user, TaxRate $taxRate): bool
