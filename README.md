@@ -104,14 +104,13 @@ After `php artisan db:seed`:
 
 Both accounts are email-verified by the seeder.
 
-## Docker (Nginx + Postgres + Redis)
+## Docker with host-managed nginx and PostgreSQL
 
-The project ships with a production-oriented Compose stack:
+Production assumes **nginx and PostgreSQL already run on the host**. Compose
+does not create duplicate nginx or PostgreSQL services. It runs:
 
-- `nginx` — HTTP
-- `app` — PHP-FPM
-- `postgres` — PostgreSQL 16
-- `redis` — cache / queues
+- `app` — PHP-FPM, exposed at `127.0.0.1:9000`
+- `redis` — private cache / queue service
 - `horizon` — queue workers
 - `scheduler` — Laravel scheduler
 
@@ -123,14 +122,32 @@ docker compose up -d --build
 docker compose exec app php artisan db:seed --force
 ```
 
-- App: `http://localhost` (override with `APP_PORT`)
-- Compose overrides `DB_HOST=postgres` and `REDIS_HOST=redis` inside containers
+- Set `DOCKER_DB_HOST=host.docker.internal`; Docker maps it to the Linux host
+- Host PostgreSQL must listen on the Docker bridge address and permit the
+  Docker subnet in `pg_hba.conf`
+- Compose uses its private Redis service and sets `REDIS_HOST=redis`
 - Migrations run automatically on app start when `RUN_MIGRATIONS=true`
+
+Build the frontend on the deployed host checkout so host nginx can serve the
+files under `public/build`:
+
+```bash
+npm ci
+npm run build
+```
+
+Install `docker/nginx/default.conf` on the host after changing:
+
+- `server_name` to the production domain
+- `root` to the deployed project's `public` directory
+
+The example forwards PHP requests to `127.0.0.1:9000`, while nginx serves
+static files directly from the host checkout.
 
 Useful commands:
 
 ```bash
-docker compose logs -f app nginx horizon
+docker compose logs -f app horizon scheduler
 docker compose exec app php artisan migrate --force
 docker compose down
 ```
