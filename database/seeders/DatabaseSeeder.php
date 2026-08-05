@@ -29,14 +29,19 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Platform Admin',
                 'password' => 'password',
+                'email_verified_at' => now(),
             ],
         );
+        if ($admin->email_verified_at === null) {
+            $admin->forceFill(['email_verified_at' => now()])->save();
+        }
         $admin->assignRole(PlatformRole::SuperAdmin);
 
         $company = Company::query()->firstOrCreate(
             ['email' => 'demo@example.com'],
             [
                 'name' => 'Demo Company',
+                'slug' => Company::uniqueSlugFromName('Demo Company'),
                 'status' => CompanyStatus::Approved,
                 'approved_by' => $admin->id,
                 'approved_at' => now(),
@@ -57,8 +62,13 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Demo Owner',
                 'password' => 'password',
                 'current_company_id' => $company->id,
+                'email_verified_at' => now(),
             ],
         );
+
+        if ($owner->email_verified_at === null) {
+            $owner->forceFill(['email_verified_at' => now()])->save();
+        }
 
         if ($owner->current_company_id !== $company->id) {
             $owner->forceFill(['current_company_id' => $company->id])->save();

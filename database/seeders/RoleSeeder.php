@@ -13,11 +13,15 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $registrar = app()[PermissionRegistrar::class];
+        $registrar->forgetCachedPermissions();
 
         foreach (PlatformPermission::cases() as $permission) {
             Permission::findOrCreate($permission->value, 'web');
         }
+
+        // Refresh the cache so syncPermissions can resolve newly created names.
+        $registrar->forgetCachedPermissions();
 
         foreach (PlatformRole::cases() as $platformRole) {
             $role = Role::findOrCreate($platformRole->value, 'web');
@@ -28,5 +32,7 @@ class RoleSeeder extends Seeder
                 ),
             );
         }
+
+        $registrar->forgetCachedPermissions();
     }
 }

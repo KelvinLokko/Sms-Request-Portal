@@ -184,6 +184,7 @@ class AnalyticsService
     {
         return match (DB::connection()->getDriverName()) {
             'sqlite' => "strftime('%Y-%m', {$column})",
+            'pgsql' => "to_char({$column}, 'YYYY-MM')",
             default => "DATE_FORMAT({$column}, '%Y-%m')",
         };
     }
@@ -192,6 +193,7 @@ class AnalyticsService
     {
         return match (DB::connection()->getDriverName()) {
             'sqlite' => "(julianday({$end}) - julianday({$start})) * 24",
+            'pgsql' => "EXTRACT(EPOCH FROM ({$end}::timestamp - {$start}::timestamp)) / 3600",
             default => "TIMESTAMPDIFF(HOUR, {$start}, {$end})",
         };
     }

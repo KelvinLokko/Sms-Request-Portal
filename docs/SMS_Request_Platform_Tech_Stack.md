@@ -7,16 +7,16 @@ Client Website
       │
 Vue 3 + Inertia.js
       │
-Laravel 12
+Laravel 13
       │
-MySQL 8 ─ Redis ─ File Storage
+PostgreSQL 16 ─ Redis ─ File Storage
       │
 Queues / Notifications / Invoice PDFs
 ```
 
 ## Backend
 
--   Laravel 12
+-   Laravel 13
 -   Laravel Breeze
 -   Laravel Sanctum
 -   Spatie Permission
@@ -151,20 +151,20 @@ Chart.js - Daily Revenue - SMS Sent - Delivery Rate - Monthly Growth
 -   PHP 8.4
 -   Laravel
 -   Redis
--   MySQL
+-   PostgreSQL
 -   Supervisor
 
 ## Recommended Stack Summary
 
   Layer            Technology
   ---------------- ---------------------------
-  Backend          Laravel 12
+  Backend          Laravel 13
   Frontend         Vue 3 + Inertia.js
   Styling          Tailwind CSS + shadcn-vue
-  Database         MySQL 8
+  Database         PostgreSQL 16
   Cache            Redis
   Queues           Laravel Horizon
-  Authentication   Breeze + Sanctum
+  Authentication   Fortify
   Roles            Spatie Permission
   PDFs             DomPDF
   Charts           Chart.js
@@ -172,6 +172,7 @@ Chart.js - Daily Revenue - SMS Sent - Delivery Rate - Monthly Growth
   Payments         MTN MoMo / Gateway
   Storage          Laravel Storage
   Web Server       Nginx
+  Containers       Docker Compose
 
 ## Recommended Business Flow
 
