@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#0B1F33">
+        <meta name="theme-color" content="#0B1F1C">
+
+        {{-- Marks the document as script-capable so reveal animations never hide content from no-JS visitors. --}}
+        <script>document.documentElement.classList.add('js');</script>
 
         <title>@yield('title', config('marketing.brand'))</title>
         <meta name="description" content="@yield('meta_description', config('marketing.description'))">
@@ -25,7 +28,7 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts
-        @vite(['resources/css/marketing.css'])
+        @vite(['resources/css/marketing.css', 'resources/js/marketing.ts'])
 
         @stack('head')
     </head>

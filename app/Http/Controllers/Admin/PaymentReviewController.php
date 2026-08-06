@@ -8,9 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectPaymentRequest;
 use App\Models\Payment;
 use App\Support\Money;
+use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -150,9 +150,9 @@ class PaymentReviewController extends Controller
     {
         $this->authorize('downloadProof', $payment);
         abort_unless($payment->hasProof(), 404);
-        abort_unless(Storage::disk('local')->exists($payment->proof_path), 404);
+        abort_unless(PrivateStorage::disk()->exists($payment->proof_path), 404);
 
-        return Storage::disk('local')->download(
+        return PrivateStorage::disk()->download(
             $payment->proof_path,
             'payment-proof-'.$payment->id.'.'.pathinfo($payment->proof_path, PATHINFO_EXTENSION),
         );

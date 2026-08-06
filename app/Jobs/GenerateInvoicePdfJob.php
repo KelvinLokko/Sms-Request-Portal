@@ -3,10 +3,10 @@
 namespace App\Jobs;
 
 use App\Models\Invoice;
+use App\Support\PrivateStorage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class GenerateInvoicePdfJob implements ShouldQueue
@@ -40,7 +40,7 @@ class GenerateInvoicePdfJob implements ShouldQueue
             Str::slug($invoice->number),
         );
 
-        Storage::disk('local')->put($path, $pdf->output());
+        PrivateStorage::disk()->put($path, $pdf->output());
 
         $invoice->forceFill(['pdf_path' => $path])->save();
     }

@@ -8,13 +8,13 @@ use App\Models\RecipientList;
 use App\Models\SmsRecipient;
 use App\Models\SmsRequest;
 use App\Support\CsvFormulaEscaper;
+use App\Support\PrivateStorage;
 use App\Support\Sms\GhanaNumberNormaliser;
 use App\Support\Sms\RecipientFileReader;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -64,9 +64,15 @@ class ValidateRecipientListJob implements ShouldBeUnique, ShouldQueue
 
     private function process(RecipientList $list): void
     {
-        $absolutePath = Storage::disk('local')->path($list->original_path);
         $extension = strtolower(pathinfo($list->original_filename, PATHINFO_EXTENSION));
 
+        PrivateStorage::withLocalPath($list->original_path, function (string $absolutePath) use ($list, $extension): void {
+            $this->processLocalFile($list, $absolutePath, $extension);
+        });
+    }
+
+    private function processLocalFile(RecipientList $list, string $absolutePath, string $extension): void
+    {
         // Clear previous recipients for re-uploads.
         SmsRecipient::query()
             ->withoutGlobalScopes()
@@ -222,7 +228,7 @@ class ValidateRecipientListJob implements ShouldBeUnique, ShouldQueue
         $contents = stream_get_contents($handle) ?: '';
         fclose($handle);
 
-        Storage::disk('local')->put($relative, $contents);
+        PrivateStorage::disk()->put($relative, $contents);
 
         return $relative;
     }

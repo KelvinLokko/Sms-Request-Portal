@@ -152,6 +152,29 @@ docker compose exec app php artisan migrate --force
 docker compose down
 ```
 
+## Object storage (Cloudflare R2)
+
+Private uploads (recipient lists, sender ID documents, invoice PDFs, payment proofs) use the Laravel default filesystem disk.
+
+| Environment | Setting |
+|-------------|---------|
+| Local development | `FILESYSTEM_DISK=local` (files under `storage/app/private`) |
+| Production / Docker | `FILESYSTEM_DISK=r2` (Cloudflare R2) |
+
+Required R2 variables (from Cloudflare → R2 → Manage R2 API Tokens):
+
+```env
+FILESYSTEM_DISK=r2
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET=your-bucket-name
+R2_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+R2_REGION=auto
+R2_USE_PATH_STYLE_ENDPOINT=true
+```
+
+Objects stay private — the app streams downloads through authenticated controllers; no public bucket is required.
+
 ## Roles and permissions
 
 Platform access is controlled by Spatie permissions (not hardcoded role names alone).
@@ -195,10 +218,11 @@ Before going live:
 
 1. Use **PostgreSQL** (MySQL is no longer the project default)
 2. Set a strong `APP_KEY`, `APP_DEBUG=false`, and production `APP_URL`
-3. Run `php artisan migrate --force` (seed only if you want demo data)
-4. Keep Redis + Horizon running for queues
-5. Build frontend assets (`npm run build`) or deploy via Docker images
-6. Protect Horizon (`/horizon`) — only staff with `horizon.view` should access it
+3. Set `FILESYSTEM_DISK=r2` and the `R2_*` credentials (see Object storage above)
+4. Run `php artisan migrate --force` (seed only if you want demo data)
+5. Keep Redis + Horizon running for queues
+6. Build frontend assets (`npm run build`) or deploy via Docker images
+7. Protect Horizon (`/horizon`) — only staff with `horizon.view` should access it
 
 ## License
 

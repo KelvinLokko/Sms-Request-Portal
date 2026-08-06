@@ -7,9 +7,9 @@ use App\Http\Requests\SenderIds\StoreSenderIdRequest;
 use App\Http\Requests\SenderIds\UpdateSenderIdRequest;
 use App\Models\SenderId;
 use App\Services\ActivityLogger;
+use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -71,7 +71,7 @@ class SenderIdController extends Controller
             $documentPath = $file->storeAs(
                 'sender-ids/'.$companyId,
                 Str::uuid()->toString().($extension !== '' ? '.'.$extension : ''),
-                'local',
+                PrivateStorage::name(),
             );
             $documentOriginalName = $file->getClientOriginalName();
         }
@@ -125,7 +125,7 @@ class SenderIdController extends Controller
 
         if ($request->hasFile('document')) {
             if ($senderId->document_path) {
-                Storage::disk('local')->delete($senderId->document_path);
+                PrivateStorage::disk()->delete($senderId->document_path);
             }
 
             $file = $request->file('document');
@@ -133,7 +133,7 @@ class SenderIdController extends Controller
             $data['document_path'] = $file->storeAs(
                 'sender-ids/'.$companyId,
                 Str::uuid()->toString().($extension !== '' ? '.'.$extension : ''),
-                'local',
+                PrivateStorage::name(),
             );
             $data['document_original_name'] = $file->getClientOriginalName();
         }
@@ -166,7 +166,7 @@ class SenderIdController extends Controller
         $this->authorize('delete', $senderId);
 
         if ($senderId->document_path) {
-            Storage::disk('local')->delete($senderId->document_path);
+            PrivateStorage::disk()->delete($senderId->document_path);
         }
 
         $logger->log('sender_id.deleted', $senderId, [
@@ -186,11 +186,11 @@ class SenderIdController extends Controller
 
         abort_unless($senderId->hasDocument(), 404);
         abort_unless(
-            Storage::disk('local')->exists($senderId->document_path),
+            PrivateStorage::disk()->exists($senderId->document_path),
             404,
         );
 
-        return Storage::disk('local')->download(
+        return PrivateStorage::disk()->download(
             $senderId->document_path,
             $senderId->document_original_name ?? 'document',
         );

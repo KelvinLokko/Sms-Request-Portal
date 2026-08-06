@@ -159,7 +159,7 @@ it('requires a recipient list when creating a campaign', function () {
 });
 
 it('validates a recipient csv and counts billable rows', function () {
-    Storage::fake('local');
+    Storage::fake(config('filesystems.default'));
     [$user, $company] = $this->createApprovedCompanyOwner();
 
     $campaign = SmsRequest::factory()->create([
@@ -171,7 +171,7 @@ it('validates a recipient csv and counts billable rows', function () {
 
     $csv = "phone,name\n0244123456,Ada\n0244987654,Kwame\n0244123456,Dup\nbad,X\n";
     $path = 'recipient-lists/'.$company->id.'/list.csv';
-    Storage::disk('local')->put($path, $csv);
+    Storage::disk(config('filesystems.default'))->put($path, $csv);
 
     $list = RecipientList::factory()->create([
         'sms_request_id' => $campaign->id,
@@ -272,7 +272,7 @@ it('rejects personalised submit when placeholders are missing from headers', fun
 });
 
 it('uploads a recipient file and queues validation', function () {
-    Storage::fake('local');
+    Storage::fake(config('filesystems.default'));
     [$user, $company] = $this->createApprovedCompanyOwner();
 
     $campaign = SmsRequest::factory()->create([

@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#0B1F33">
+        <meta name="theme-color" content="#0B1F1C">
 
         {{-- Light-first: only apply dark when explicitly chosen --}}
         <script>
@@ -23,11 +23,11 @@
 
         <style>
             html {
-                background-color: hsl(200 33% 97%);
+                background-color: hsl(80 22% 97%);
             }
 
             html.dark {
-                background-color: hsl(205 45% 9%);
+                background-color: hsl(168 46% 7%);
             }
         </style>
 

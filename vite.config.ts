@@ -13,11 +13,12 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/marketing.css',
                 'resources/js/app.ts',
+                'resources/js/marketing.ts',
             ],
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
+                    weights: [400, 500, 600, 700],
                 }),
             ],
         }),

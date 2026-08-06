@@ -6,9 +6,9 @@ use App\Contracts\PaymentProvider;
 use App\Http\Requests\Payments\StorePaymentRequest;
 use App\Models\Invoice;
 use App\Support\Money;
+use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -84,9 +84,9 @@ class InvoiceController extends Controller
     {
         $this->authorize('download', $invoice);
         abort_unless($invoice->hasPdf(), 404);
-        abort_unless(Storage::disk('local')->exists($invoice->pdf_path), 404);
+        abort_unless(PrivateStorage::disk()->exists($invoice->pdf_path), 404);
 
-        return Storage::disk('local')->download(
+        return PrivateStorage::disk()->download(
             $invoice->pdf_path,
             $invoice->number.'.pdf',
         );
@@ -103,7 +103,7 @@ class InvoiceController extends Controller
             $proofPath = $file->storeAs(
                 'payment-proofs/'.$invoice->company_id.'/'.$invoice->id,
                 Str::uuid()->toString().'.'.$file->getClientOriginalExtension(),
-                'local',
+                PrivateStorage::name(),
             );
         }
 

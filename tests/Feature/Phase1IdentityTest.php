@@ -84,7 +84,7 @@ it('scopes sender ids to the current company', function () {
 });
 
 it('lets a company owner create a sender id with a private document', function () {
-    Storage::fake('local');
+    Storage::fake(config('filesystems.default'));
     [$user] = $this->createApprovedCompanyOwner();
 
     $file = UploadedFile::fake()->create('letterhead.pdf', 100, 'application/pdf');
@@ -103,7 +103,7 @@ it('lets a company owner create a sender id with a private document', function (
         ->and($senderId->status)->toBe(SenderIdStatus::Pending)
         ->and($senderId->document_path)->not->toBeNull();
 
-    Storage::disk('local')->assertExists($senderId->document_path);
+    Storage::disk(config('filesystems.default'))->assertExists($senderId->document_path);
 });
 
 it('rejects invalid sender id characters', function () {

@@ -61,9 +61,13 @@
     --color-sidebar-ring: var(--sidebar-ring);
 
     --color-ink: var(--ink);
+    --color-forest: var(--forest);
+    --color-moss: var(--moss);
     --color-mist: var(--mist);
     --color-signal: var(--signal);
     --color-signal-soft: var(--signal-soft);
+    --color-signal-strong: var(--signal-strong);
+    --color-surface: var(--surface);
 }
 
 /*
@@ -95,12 +99,15 @@
 }
 
 :root {
-    /* Brand — ink navy + teal signal (light-first) */
-    --ink: hsl(205 58% 12%);
-    --mist: hsl(200 33% 97%);
+    /* Brand — deep forest green with a lime signal accent (matches marketing site). */
+    --ink: hsl(168 46% 8%);
+    --forest: hsl(170 38% 13%);
+    --moss: hsl(168 30% 19%);
+    --mist: hsl(80 22% 97%);
     --surface: hsl(0 0% 100%);
-    --signal: hsl(173 72% 32%);
-    --signal-soft: hsl(173 45% 92%);
+    --signal: hsl(76 80% 62%);
+    --signal-soft: hsl(76 62% 92%);
+    --signal-strong: hsl(158 68% 22%);
 
     --background: var(--mist);
     --foreground: var(--ink);
@@ -109,41 +116,44 @@
     --popover: var(--surface);
     --popover-foreground: var(--ink);
     --primary: var(--signal);
-    --primary-foreground: hsl(0 0% 100%);
-    --secondary: hsl(200 25% 92%);
+    --primary-foreground: var(--ink);
+    --secondary: hsl(80 16% 92%);
     --secondary-foreground: var(--ink);
-    --muted: hsl(200 28% 94%);
-    --muted-foreground: hsl(205 20% 40%);
+    --muted: hsl(80 16% 94%);
+    --muted-foreground: hsl(170 12% 36%);
     --accent: var(--signal-soft);
-    --accent-foreground: hsl(173 72% 22%);
+    --accent-foreground: var(--signal-strong);
     --destructive: hsl(0 72% 48%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(200 22% 88%);
-    --input: hsl(200 22% 88%);
-    --ring: var(--signal);
-    --chart-1: hsl(173 72% 32%);
-    --chart-2: hsl(205 58% 28%);
-    --chart-3: hsl(190 55% 42%);
-    --chart-4: hsl(160 45% 40%);
+    --border: hsl(160 14% 88%);
+    --input: hsl(160 14% 88%);
+    --ring: var(--signal-strong);
+    --chart-1: hsl(76 80% 52%);
+    --chart-2: hsl(170 38% 28%);
+    --chart-3: hsl(158 68% 32%);
+    --chart-4: hsl(190 45% 40%);
     --chart-5: hsl(35 80% 52%);
     --radius: 0.75rem;
-    --sidebar-background: hsl(200 30% 98%);
+    --sidebar-background: hsl(80 20% 98%);
     --sidebar-foreground: var(--ink);
     --sidebar-primary: var(--signal);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-primary-foreground: var(--ink);
     --sidebar-accent: var(--signal-soft);
-    --sidebar-accent-foreground: hsl(173 72% 22%);
-    --sidebar-border: hsl(200 22% 90%);
-    --sidebar-ring: var(--signal);
-    --sidebar: hsl(200 30% 98%);
+    --sidebar-accent-foreground: var(--signal-strong);
+    --sidebar-border: hsl(160 14% 90%);
+    --sidebar-ring: var(--signal-strong);
+    --sidebar: hsl(80 20% 98%);
 }
 
 .dark {
-    --ink: hsl(200 33% 96%);
-    --mist: hsl(205 45% 9%);
-    --surface: hsl(205 40% 12%);
-    --signal: hsl(173 65% 42%);
-    --signal-soft: hsl(173 35% 18%);
+    --ink: hsl(80 22% 96%);
+    --mist: hsl(168 46% 7%);
+    --surface: hsl(170 38% 11%);
+    --forest: hsl(170 38% 13%);
+    --moss: hsl(168 30% 19%);
+    --signal: hsl(76 80% 62%);
+    --signal-soft: hsl(76 35% 16%);
+    --signal-strong: hsl(76 70% 72%);
 
     --background: var(--mist);
     --foreground: var(--ink);
@@ -152,32 +162,32 @@
     --popover: var(--surface);
     --popover-foreground: var(--ink);
     --primary: var(--signal);
-    --primary-foreground: hsl(205 58% 8%);
-    --secondary: hsl(205 30% 16%);
+    --primary-foreground: hsl(168 46% 8%);
+    --secondary: hsl(168 24% 16%);
     --secondary-foreground: var(--ink);
-    --muted: hsl(205 28% 16%);
-    --muted-foreground: hsl(200 15% 68%);
+    --muted: hsl(168 22% 16%);
+    --muted-foreground: hsl(80 12% 68%);
     --accent: var(--signal-soft);
-    --accent-foreground: hsl(173 55% 72%);
+    --accent-foreground: var(--signal-strong);
     --destructive: hsl(0 70% 52%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(205 25% 20%);
-    --input: hsl(205 25% 20%);
+    --border: hsl(168 20% 20%);
+    --input: hsl(168 20% 20%);
     --ring: var(--signal);
-    --chart-1: hsl(173 65% 42%);
-    --chart-2: hsl(200 55% 55%);
-    --chart-3: hsl(190 50% 48%);
-    --chart-4: hsl(160 45% 45%);
+    --chart-1: hsl(76 80% 62%);
+    --chart-2: hsl(170 38% 45%);
+    --chart-3: hsl(158 55% 48%);
+    --chart-4: hsl(190 45% 45%);
     --chart-5: hsl(35 75% 55%);
-    --sidebar-background: hsl(205 42% 8%);
-    --sidebar-foreground: hsl(200 25% 92%);
+    --sidebar-background: hsl(168 46% 6%);
+    --sidebar-foreground: hsl(80 20% 92%);
     --sidebar-primary: var(--signal);
-    --sidebar-primary-foreground: hsl(205 58% 8%);
-    --sidebar-accent: hsl(173 30% 16%);
-    --sidebar-accent-foreground: hsl(173 55% 72%);
-    --sidebar-border: hsl(205 28% 16%);
+    --sidebar-primary-foreground: hsl(168 46% 8%);
+    --sidebar-accent: hsl(76 35% 16%);
+    --sidebar-accent-foreground: hsl(76 70% 72%);
+    --sidebar-border: hsl(168 22% 16%);
     --sidebar-ring: var(--signal);
-    --sidebar: hsl(205 42% 8%);
+    --sidebar: hsl(168 46% 6%);
 }
 
 @layer base {
@@ -216,21 +226,29 @@
     .auth-panel-glow {
         background:
             radial-gradient(
-                120% 80% at 80% 10%,
-                hsl(173 60% 40% / 0.28),
+                100% 70% at 78% 8%,
+                hsl(76 80% 62% / 0.16),
                 transparent 55%
             ),
             radial-gradient(
-                90% 70% at 10% 90%,
-                hsl(205 50% 30% / 0.4),
-                transparent 50%
+                80% 60% at 5% 95%,
+                hsl(160 60% 30% / 0.35),
+                transparent 55%
             ),
             linear-gradient(
                 165deg,
-                hsl(205 58% 10%) 0%,
-                hsl(200 45% 18%) 55%,
-                hsl(173 40% 18%) 100%
+                hsl(168 46% 8%) 0%,
+                hsl(170 38% 12%) 55%,
+                hsl(166 34% 15%) 100%
             );
+    }
+
+    .auth-grid-lines {
+        background-image:
+            linear-gradient(to right, hsl(0 0% 100% / 0.045) 1px, transparent 1px),
+            linear-gradient(to bottom, hsl(0 0% 100% / 0.045) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(80% 70% at 50% 30%, #000 30%, transparent 100%);
     }
 
     .surface-panel {

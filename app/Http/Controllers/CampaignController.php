@@ -15,13 +15,13 @@ use App\Models\SenderId;
 use App\Models\SmsRequest;
 use App\Services\SmsRequestService;
 use App\Support\Money;
+use App\Support\PrivateStorage;
 use App\Support\Sms\CostEngine;
 use App\Support\Sms\SegmentCounter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -169,7 +169,7 @@ class CampaignController extends Controller
         $path = $file->storeAs(
             'recipient-lists/'.$companyId.'/'.$campaign->id,
             Str::uuid()->toString().'.'.$extension,
-            'local',
+            PrivateStorage::name(),
         );
 
         // Replace any previous list on re-upload from the detail page.
@@ -198,9 +198,9 @@ class CampaignController extends Controller
 
         $list = $campaign->recipientList;
         abort_if($list === null || ! $list->hasRejectedExport(), 404);
-        abort_unless(Storage::disk('local')->exists($list->rejected_export_path), 404);
+        abort_unless(PrivateStorage::disk()->exists($list->rejected_export_path), 404);
 
-        return Storage::disk('local')->download(
+        return PrivateStorage::disk()->download(
             $list->rejected_export_path,
             'rejected-'.$campaign->reference.'.csv',
         );

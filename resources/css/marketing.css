@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 
 @source '../views/marketing/**/*.blade.php';
+@source '../views/components/marketing/**/*.blade.php';
+@source '../js/marketing.ts';
 
 @theme inline {
     --font-sans:
@@ -19,30 +21,37 @@
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
     --color-ink: var(--ink);
+    --color-forest: var(--forest);
+    --color-moss: var(--moss);
     --color-mist: var(--mist);
     --color-signal: var(--signal);
     --color-signal-soft: var(--signal-soft);
+    --color-signal-strong: var(--signal-strong);
     --color-surface: var(--surface);
 }
 
 :root {
-    /* Brand — shared with app shell (ink + teal, light-first) */
-    --ink: hsl(205 58% 12%);
-    --mist: hsl(200 33% 97%);
+    /* Marketing brand — deep forest green with a lime signal accent. */
+    --ink: hsl(168 46% 8%);
+    --forest: hsl(170 38% 13%);
+    --moss: hsl(168 30% 19%);
+    --mist: hsl(80 22% 97%);
     --surface: hsl(0 0% 100%);
-    --signal: hsl(173 72% 32%);
-    --signal-soft: hsl(173 45% 92%);
+    --signal: hsl(76 80% 62%);
+    --signal-soft: hsl(76 62% 92%);
+    /* Accessible accent for small text on light surfaces (lime fails AA there). */
+    --signal-strong: hsl(158 68% 22%);
 
     --background: var(--mist);
     --foreground: var(--ink);
     --primary: var(--signal);
-    --primary-foreground: hsl(0 0% 100%);
-    --muted: hsl(200 28% 94%);
-    --muted-foreground: hsl(205 20% 40%);
-    --border: hsl(200 22% 88%);
-    --ring: var(--signal);
+    --primary-foreground: var(--ink);
+    --muted: hsl(80 16% 94%);
+    --muted-foreground: hsl(170 12% 36%);
+    --border: hsl(160 14% 88%);
+    --ring: var(--signal-strong);
     --accent: var(--signal-soft);
-    --accent-foreground: hsl(173 72% 22%);
+    --accent-foreground: var(--signal-strong);
 }
 
 @layer base {
@@ -64,24 +73,81 @@
         }
     }
 
+    /*
+      Clip sideways overflow without pairing into overflow-y: clip (which would
+      freeze the page below the fold). Keep vertical scrolling on the root.
+    */
+    html {
+        overflow-x: clip;
+        overflow-y: scroll;
+    }
+
     body {
-        @apply bg-mist font-sans text-ink antialiased;
+        @apply overflow-x-clip bg-mist font-sans text-ink antialiased;
+        overflow-y: visible;
     }
 
     :focus-visible {
-        @apply outline-2 outline-offset-2 outline-signal;
+        @apply outline-signal-strong outline-2 outline-offset-2;
     }
 
     a:focus-visible,
     button:focus-visible,
     summary:focus-visible {
-        @apply outline-2 outline-offset-2 outline-signal;
+        @apply outline-signal-strong outline-2 outline-offset-2;
+    }
+
+    /* Dark sections need a light focus ring to stay visible. */
+    .on-dark :focus-visible {
+        @apply outline-signal;
+    }
+}
+
+@layer components {
+    .btn-lime {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-signal px-6 text-sm font-semibold text-ink transition duration-200 hover:shadow-lg hover:shadow-signal/25 hover:brightness-105 active:scale-[0.98];
+    }
+
+    .btn-ink {
+        @apply hover:bg-forest inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-6 text-sm font-semibold text-white transition duration-200 active:scale-[0.98];
+    }
+
+    .btn-outline-light {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/25 bg-white/5 px-6 text-sm font-semibold text-white transition duration-200 hover:border-white/50 hover:bg-white/10 active:scale-[0.98];
+    }
+
+    .btn-outline-ink {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink/15 bg-white px-6 text-sm font-semibold text-ink transition duration-200 hover:border-ink/35 active:scale-[0.98];
+    }
+
+    .eyebrow {
+        @apply text-signal-strong inline-flex items-center gap-2 rounded-full bg-signal-soft px-3 py-1 text-xs font-semibold tracking-wide uppercase;
+    }
+
+    .eyebrow-dark {
+        @apply inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-signal uppercase;
+    }
+
+    .section-title {
+        @apply text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl lg:text-[2.75rem];
+    }
+
+    .icon-chip {
+        @apply flex size-11 shrink-0 items-center justify-center rounded-full bg-signal text-ink;
+    }
+
+    .card-lift {
+        @apply transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-ink/10;
+    }
+
+    [data-site-header].is-stuck {
+        @apply border-b border-white/10 bg-ink/85 shadow-lg shadow-ink/25 backdrop-blur-md;
     }
 }
 
 @layer utilities {
     .skip-link {
-        @apply absolute left-4 top-0 z-50 -translate-y-full rounded-md bg-ink px-4 py-3 text-sm font-medium text-white transition-transform;
+        @apply absolute top-0 left-4 z-50 -translate-y-full rounded-md bg-ink px-4 py-3 text-sm font-medium text-white transition-transform;
     }
 
     .skip-link:focus {
@@ -91,26 +157,91 @@
     .marketing-hero-glow {
         background:
             radial-gradient(
-                120% 80% at 80% 10%,
-                hsl(173 60% 40% / 0.22),
+                100% 70% at 78% 8%,
+                hsl(76 80% 62% / 0.16),
                 transparent 55%
             ),
             radial-gradient(
-                90% 70% at 10% 90%,
-                hsl(205 50% 30% / 0.35),
-                transparent 50%
+                80% 60% at 5% 95%,
+                hsl(160 60% 30% / 0.35),
+                transparent 55%
             ),
-            linear-gradient(165deg, hsl(205 58% 10%) 0%, hsl(200 45% 18%) 55%, hsl(173 40% 18%) 100%);
+            linear-gradient(
+                165deg,
+                hsl(168 46% 8%) 0%,
+                hsl(170 38% 12%) 55%,
+                hsl(166 34% 15%) 100%
+            );
     }
 
-    @keyframes marketing-fade-up {
+    .grid-lines {
+        background-image:
+            linear-gradient(
+                to right,
+                hsl(0 0% 100% / 0.045) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to bottom,
+                hsl(0 0% 100% / 0.045) 1px,
+                transparent 1px
+            );
+        background-size: 64px 64px;
+        mask-image: radial-gradient(
+            80% 70% at 50% 30%,
+            #000 30%,
+            transparent 100%
+        );
+    }
+
+    /* Scroll reveal — only hides content once JS has confirmed it can reveal it. */
+    .js [data-reveal] {
+        opacity: 0;
+        transform: translateY(1.5rem);
+        transition:
+            opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+            transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+        transition-delay: var(--reveal-delay, 0ms);
+    }
+
+    .js [data-reveal='left'] {
+        transform: translateX(-1.5rem);
+    }
+
+    .js [data-reveal='right'] {
+        transform: translateX(1.5rem);
+    }
+
+    .js [data-reveal='scale'] {
+        transform: scale(0.96);
+    }
+
+    /* Narrow screens have no room for a sideways entrance. */
+    @media (width < 40rem) {
+        .js [data-reveal='left'],
+        .js [data-reveal='right'] {
+            transform: translateY(1.5rem);
+        }
+    }
+
+    .js [data-reveal].is-revealed {
+        opacity: 1;
+        transform: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .js [data-reveal] {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @keyframes marketing-float {
         from {
-            opacity: 0;
-            transform: translateY(1rem);
+            transform: translate3d(0, 0, 0);
         }
         to {
-            opacity: 1;
-            transform: translateY(0);
+            transform: translate3d(0, -0.75rem, 0);
         }
     }
 
@@ -123,20 +254,57 @@
         }
     }
 
-    .animate-fade-up {
-        animation: marketing-fade-up 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    @keyframes marketing-pulse-ring {
+        0% {
+            transform: scale(0.85);
+            opacity: 0.7;
+        }
+        70% {
+            transform: scale(1.35);
+            opacity: 0;
+        }
+        100% {
+            opacity: 0;
+        }
     }
 
-    .animate-fade-up-delay {
-        animation: marketing-fade-up 700ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+    @keyframes marketing-marquee {
+        from {
+            transform: translateX(0);
+        }
+        to {
+            transform: translateX(-50%);
+        }
     }
 
-    .animate-fade-up-delay-2 {
-        animation: marketing-fade-up 700ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both;
+    .animate-float {
+        animation: marketing-float 6s ease-in-out infinite alternate;
+    }
+
+    .animate-float-slow {
+        animation: marketing-float 9s ease-in-out 400ms infinite alternate;
     }
 
     .animate-drift {
-        animation: marketing-drift 18s ease-in-out alternate infinite;
+        animation: marketing-drift 18s ease-in-out infinite alternate;
+    }
+
+    .animate-pulse-ring {
+        animation: marketing-pulse-ring 2.8s ease-out infinite;
+    }
+
+    .animate-marquee {
+        animation: marketing-marquee 32s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animate-float,
+        .animate-float-slow,
+        .animate-drift,
+        .animate-pulse-ring,
+        .animate-marquee {
+            animation: none !important;
+        }
     }
 
     summary::-webkit-details-marker {
@@ -145,5 +313,9 @@
 
     summary {
         list-style: none;
+    }
+
+    details[open] .faq-icon {
+        transform: rotate(45deg);
     }
 }

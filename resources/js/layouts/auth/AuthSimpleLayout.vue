@@ -15,14 +15,18 @@ const brand = usePage().props.name;
     <div class="flex min-h-svh flex-col bg-background lg:flex-row">
         <!-- Mobile brand strip -->
         <div
-            class="auth-panel-glow flex items-center gap-3 px-5 py-4 text-white lg:hidden"
+            class="auth-panel-glow relative flex items-center gap-3 overflow-hidden px-5 py-4 text-white lg:hidden"
         >
+            <div
+                class="auth-grid-lines pointer-events-none absolute inset-0"
+                aria-hidden="true"
+            />
             <Link
                 :href="home()"
-                class="inline-flex items-center gap-3 transition-opacity hover:opacity-90"
+                class="relative z-10 inline-flex items-center gap-3 transition-opacity hover:opacity-90"
             >
                 <span
-                    class="flex size-9 items-center justify-center rounded-xl bg-white/15 text-white backdrop-blur-sm"
+                    class="flex size-9 items-center justify-center rounded-xl bg-signal text-ink"
                 >
                     <AppLogoIcon class="size-5" />
                 </span>
@@ -37,7 +41,11 @@ const brand = usePage().props.name;
             class="auth-panel-glow relative hidden flex-col justify-between overflow-hidden px-10 py-12 text-white lg:flex lg:w-[46%] lg:max-w-xl lg:px-12"
         >
             <div
-                class="pointer-events-none absolute inset-0 opacity-30"
+                class="auth-grid-lines pointer-events-none absolute inset-0"
+                aria-hidden="true"
+            />
+            <div
+                class="pointer-events-none absolute inset-0 opacity-40"
                 aria-hidden="true"
             >
                 <svg
@@ -50,22 +58,22 @@ const brand = usePage().props.name;
                         cx="480"
                         cy="120"
                         r="180"
-                        stroke="#2dd4bf"
-                        stroke-opacity="0.35"
+                        stroke="#C6F24E"
+                        stroke-opacity="0.25"
                         stroke-width="1.5"
                     />
                     <circle
                         cx="480"
                         cy="120"
                         r="110"
-                        stroke="#99f6e4"
-                        stroke-opacity="0.25"
+                        stroke="#ECFCCB"
+                        stroke-opacity="0.2"
                         stroke-width="1.5"
                     />
                     <path
                         d="M40 640c120-80 220-40 320-100s180-40 220 20"
-                        stroke="#0d9488"
-                        stroke-opacity="0.4"
+                        stroke="#86EFAC"
+                        stroke-opacity="0.35"
                         stroke-width="1.5"
                     />
                 </svg>
@@ -76,7 +84,7 @@ const brand = usePage().props.name;
                 class="relative z-10 inline-flex items-center gap-3 self-start transition-opacity hover:opacity-90"
             >
                 <span
-                    class="flex size-10 items-center justify-center rounded-xl bg-white/15 text-white backdrop-blur-sm"
+                    class="flex size-10 items-center justify-center rounded-xl bg-signal text-ink shadow-sm shadow-black/20"
                 >
                     <AppLogoIcon class="size-6" />
                 </span>
@@ -87,12 +95,12 @@ const brand = usePage().props.name;
 
             <div class="relative z-10 max-w-md animate-fade-up">
                 <p
-                    class="text-sm font-medium tracking-wide text-teal-100/80 uppercase"
+                    class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-signal uppercase"
                 >
                     Managed SMS portal
                 </p>
                 <h1
-                    class="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
+                    class="mt-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl"
                 >
                     Submit SMS campaigns. We handle the rest.
                 </h1>

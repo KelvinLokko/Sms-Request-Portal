@@ -42,7 +42,12 @@ Roles: - Customer - Admin - Finance - Super Admin
 
 ## Storage
 
-Laravel Storage (S3/R2-ready)
+Laravel Storage — default disk is configurable:
+
+- Local: `FILESYSTEM_DISK=local`
+- Cloudflare R2 (production): `FILESYSTEM_DISK=r2` with `R2_*` credentials
+
+Private object paths for recipient lists, sender documents, invoice PDFs, and payment proofs.
 
 ## Queue
 
