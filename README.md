@@ -175,6 +175,30 @@ R2_USE_PATH_STYLE_ENDPOINT=true
 
 Objects stay private — the app streams downloads through authenticated controllers; no public bucket is required.
 
+## Signup security
+
+Registration requires email verification **before** an account is created:
+
+1. User enters name + email
+2. Cloudflare Turnstile check (when configured)
+3. 6-digit OTP emailed and verified
+4. Company + password steps unlock
+5. Account is created with `email_verified_at` already set
+
+Bot hardening also includes:
+
+- Cloudflare Turnstile on login and registration (set `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`)
+- Hidden honeypot field (`website`) rejected when filled
+- Rate limits on OTP send/verify and registration attempts
+- CSP allows Turnstile frames/scripts only
+
+```env
+TURNSTILE_SITE_KEY=...
+TURNSTILE_SECRET_KEY=...
+```
+
+Leave Turnstile keys empty in local/dev to skip the widget; OTP verification still runs.
+
 ## Roles and permissions
 
 Platform access is controlled by Spatie permissions (not hardcoded role names alone).

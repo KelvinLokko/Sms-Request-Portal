@@ -12,8 +12,9 @@ use App\Support\Money;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesCompanies;
+use Tests\Concerns\RegistersVerifiedUsers;
 
-uses(CreatesCompanies::class);
+uses(CreatesCompanies::class, RegistersVerifiedUsers::class);
 
 it('converts money without floating point drift', function () {
     expect(Money::fromMajor('1.23'))->toBe(123)
@@ -22,11 +23,9 @@ it('converts money without floating point drift', function () {
 });
 
 it('registers a user with a pending company as owner', function () {
-    $response = $this->post(route('register.store'), [
+    $response = $this->registerVerifiedUser([
         'name' => 'Ada Lovelace',
         'email' => 'ada@example.com',
-        'password' => 'SmsPortal-Test-Pass1!',
-        'password_confirmation' => 'SmsPortal-Test-Pass1!',
         'company_name' => 'Analytical Engines Ltd',
         'company_phone' => '0244123456',
     ]);
@@ -39,7 +38,8 @@ it('registers a user with a pending company as owner', function () {
         ->and($user->currentCompany)->not->toBeNull()
         ->and($user->currentCompany->name)->toBe('Analytical Engines Ltd')
         ->and($user->currentCompany->status)->toBe(CompanyStatus::Pending)
-        ->and($user->companyRole())->toBe(CompanyUserRole::Owner);
+        ->and($user->companyRole())->toBe(CompanyUserRole::Owner)
+        ->and($user->email_verified_at)->not->toBeNull();
 });
 
 it('prevents unapproved companies from passing the approval gate', function () {

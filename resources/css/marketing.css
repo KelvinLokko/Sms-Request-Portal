@@ -174,26 +174,6 @@
             );
     }
 
-    .grid-lines {
-        background-image:
-            linear-gradient(
-                to right,
-                hsl(0 0% 100% / 0.045) 1px,
-                transparent 1px
-            ),
-            linear-gradient(
-                to bottom,
-                hsl(0 0% 100% / 0.045) 1px,
-                transparent 1px
-            );
-        background-size: 64px 64px;
-        mask-image: radial-gradient(
-            80% 70% at 50% 30%,
-            #000 30%,
-            transparent 100%
-        );
-    }
-
     /* Scroll reveal — only hides content once JS has confirmed it can reveal it. */
     .js [data-reveal] {
         opacity: 0;

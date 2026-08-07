@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import HoneypotInput from '@/components/HoneypotInput.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
+import TurnstileWidget from '@/components/TurnstileWidget.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -22,6 +24,7 @@ defineOptions({
 defineProps<{
     status?: string;
     canResetPassword: boolean;
+    turnstileSiteKey: string | null;
 }>();
 </script>
 
@@ -39,8 +42,10 @@ defineProps<{
         v-bind="store.form()"
         :reset-on-success="['password']"
         v-slot="{ errors, processing }"
-        class="flex flex-col gap-6"
+        class="relative flex flex-col gap-6"
     >
+        <HoneypotInput />
+
         <div class="grid gap-6">
             <div class="grid gap-2">
                 <Label for="email">Email address</Label>
@@ -86,6 +91,9 @@ defineProps<{
                     <span>Remember me</span>
                 </Label>
             </div>
+
+            <TurnstileWidget :site-key="turnstileSiteKey" />
+            <InputError :message="errors['cf-turnstile-response']" />
 
             <Button
                 type="submit"

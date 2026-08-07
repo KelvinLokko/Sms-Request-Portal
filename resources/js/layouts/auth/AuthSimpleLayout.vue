@@ -17,10 +17,6 @@ const brand = usePage().props.name;
         <div
             class="auth-panel-glow relative flex items-center gap-3 overflow-hidden px-5 py-4 text-white lg:hidden"
         >
-            <div
-                class="auth-grid-lines pointer-events-none absolute inset-0"
-                aria-hidden="true"
-            />
             <Link
                 :href="home()"
                 class="relative z-10 inline-flex items-center gap-3 transition-opacity hover:opacity-90"
@@ -40,10 +36,6 @@ const brand = usePage().props.name;
         <aside
             class="auth-panel-glow relative hidden flex-col justify-between overflow-hidden px-10 py-12 text-white lg:flex lg:w-[46%] lg:max-w-xl lg:px-12"
         >
-            <div
-                class="auth-grid-lines pointer-events-none absolute inset-0"
-                aria-hidden="true"
-            />
             <div
                 class="pointer-events-none absolute inset-0 opacity-40"
                 aria-hidden="true"

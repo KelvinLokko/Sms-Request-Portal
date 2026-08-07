@@ -40,8 +40,9 @@ class SecurityHeaders
      */
     protected function contentSecurityPolicy(): string
     {
-        $scriptSrc = ["'self'", "'unsafe-inline'"];
-        $connectSrc = ["'self'"];
+        $scriptSrc = ["'self'", "'unsafe-inline'", 'https://challenges.cloudflare.com'];
+        $connectSrc = ["'self'", 'https://challenges.cloudflare.com'];
+        $frameSrc = ['https://challenges.cloudflare.com'];
 
         if (! app()->isProduction()) {
             // Vite HMR / dev server needs eval and websocket connects.
@@ -59,6 +60,7 @@ class SecurityHeaders
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
             'connect-src '.implode(' ', $connectSrc),
+            'frame-src '.implode(' ', $frameSrc),
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",

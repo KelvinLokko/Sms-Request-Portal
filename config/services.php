@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    /*
+    | Cloudflare Turnstile — bot protection for login / registration.
+    | Leave keys empty locally to disable; production should always set both.
+    */
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
 ];

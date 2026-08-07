@@ -243,7 +243,6 @@
         {{-- Hero — no overflow-hidden here; the capability strip must hang into the next section. --}}
         <section class="marketing-hero-glow on-dark relative z-10 text-white" aria-labelledby="hero-heading">
             <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-                <div class="grid-lines absolute inset-0"></div>
                 <div class="absolute inset-0 animate-drift opacity-50">
                     <svg class="h-full w-full" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" role="presentation">
                         <defs>
@@ -686,7 +685,6 @@
                     class="marketing-hero-glow relative overflow-hidden rounded-[2rem] px-6 py-14 text-white sm:px-12 sm:py-16"
                     data-reveal="scale"
                 >
-                    <div class="grid-lines pointer-events-none absolute inset-0" aria-hidden="true"></div>
                     <div class="relative flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:justify-between">
                         <div class="max-w-xl">
                             <h2 id="cta-heading" class="section-title">Ready to submit your next campaign?</h2>

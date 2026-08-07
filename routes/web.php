@@ -7,10 +7,11 @@ use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\CompanyRateController;
 use App\Http\Controllers\Admin\FulfilmentController;
 use App\Http\Controllers\Admin\PaymentReviewController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SenderIdReviewController;
 use App\Http\Controllers\Admin\TaxRateController;
-use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\RegistrationOtpController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
@@ -21,6 +22,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)->name('home');
 Route::get('/robots.txt', [HomeController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [HomeController::class, 'sitemap'])->name('sitemap');
+
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+    Route::post('/register/otp/send', [RegistrationOtpController::class, 'send'])
+        ->name('register.otp.send');
+    Route::post('/register/otp/verify', [RegistrationOtpController::class, 'verify'])
+        ->name('register.otp.verify');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
