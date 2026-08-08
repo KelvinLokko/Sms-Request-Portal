@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM php:8.3-cli-bookworm AS builder
+FROM php:8.4-cli-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -51,7 +51,7 @@ RUN mkdir -p bootstrap/cache storage/framework/{cache,sessions,views} storage/lo
     && npm run build \
     && rm -f .env
 
-FROM php:8.3-fpm-bookworm AS app
+FROM php:8.4-fpm-bookworm AS app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
@@ -88,3 +88,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
+
+FROM nginx:1.27-alpine AS web
+
+COPY --from=builder /app/public /var/www/html/public
+COPY docker/nginx/app.conf /etc/nginx/conf.d/default.conf

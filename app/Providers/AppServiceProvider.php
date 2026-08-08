@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
@@ -34,8 +36,22 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
+        $this->configureAssetUrls();
 
         Gate::policy(Role::class, RolePolicy::class);
+    }
+
+    /**
+     * Prefer relative Vite asset URLs so tunnels (ngrok/localtunnel) do not
+     * break CSS/JS with absolute http:// links or host mismatches.
+     */
+    protected function configureAssetUrls(): void
+    {
+        Vite::createAssetPathsUsing(fn (string $path): string => '/'.ltrim($path, '/'));
+
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
     }
 
     /**

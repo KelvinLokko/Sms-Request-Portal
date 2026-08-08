@@ -8,7 +8,7 @@ The portal does **not** send SMS itself. Operations staff review campaigns, issu
 
 | Layer | Technology |
 | --- | --- |
-| Backend | Laravel 13, PHP 8.3+ |
+| Backend | Laravel 13, PHP 8.4+ |
 | Frontend | Vue 3, Inertia.js, Tailwind CSS |
 | Auth | Laravel Fortify |
 | Roles / permissions | Spatie Laravel Permission |
@@ -38,7 +38,7 @@ The portal does **not** send SMS itself. Operations staff review campaigns, issu
 
 ## Requirements (local)
 
-- PHP 8.3+ with extensions: `pdo_pgsql`, `pgsql`, `redis`, `gd`, `bcmath`, `intl`, `pcntl`, `zip`
+- PHP 8.4+ with extensions: `pdo_pgsql`, `pgsql`, `redis`, `gd`, `bcmath`, `intl`, `pcntl`, `zip`
 - Composer 2
 - Node.js 22+ and npm
 - PostgreSQL 16+
@@ -107,9 +107,11 @@ Both accounts are email-verified by the seeder.
 ## Docker with host-managed nginx and PostgreSQL
 
 Production assumes **nginx and PostgreSQL already run on the host**. Compose
-does not create duplicate nginx or PostgreSQL services. It runs:
+does not create a PostgreSQL service, and host nginx stays a thin reverse
+proxy. It runs:
 
-- `app` — PHP-FPM, exposed at `127.0.0.1:9000`
+- `app` — PHP-FPM, private to the compose network
+- `web` — nginx serving `public/` from the image, published at `127.0.0.1:8080`
 - `redis` — private cache / queue service
 - `horizon` — queue workers
 - `scheduler` — Laravel scheduler
@@ -128,21 +130,16 @@ docker compose exec app php artisan db:seed --force
 - Compose uses its private Redis service and sets `REDIS_HOST=redis`
 - Migrations run automatically on app start when `RUN_MIGRATIONS=true`
 
-Build the frontend on the deployed host checkout so host nginx can serve the
-files under `public/build`:
+Frontend assets are built inside the image and served by the `web` container,
+so nothing needs to be built or checked out on the host.
 
-```bash
-npm ci
-npm run build
-```
+Install `docker/nginx/default.conf` on the host and change `server_name` to the
+production domain. It reverse proxies everything to `127.0.0.1:8080` and passes
+`X-Forwarded-Proto`, which Laravel uses to generate `https://` URLs. Run certbot
+against that server block to add TLS.
 
-Install `docker/nginx/default.conf` on the host after changing:
-
-- `server_name` to the production domain
-- `root` to the deployed project's `public` directory
-
-The example forwards PHP requests to `127.0.0.1:9000`, while nginx serves
-static files directly from the host checkout.
+The nginx config used inside the container lives at `docker/nginx/app.conf`; it
+serves `public/` and forwards PHP requests to `app:9000`.
 
 Useful commands:
 
