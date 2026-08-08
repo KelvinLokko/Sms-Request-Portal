@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Mail\RegistrationOtpMail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class RegistrationOtpService
 {
@@ -28,7 +30,20 @@ class RegistrationOtpService
             'attempts' => 0,
         ], now()->addMinutes(self::OTP_TTL_MINUTES));
 
-        Mail::to($email)->send(new RegistrationOtpMail($code, $name));
+        try {
+            Mail::to($email)->send(new RegistrationOtpMail($code, $name));
+        } catch (Throwable $exception) {
+            Cache::forget($this->otpKey($email));
+
+            Log::error('Registration OTP mail failed.', [
+                'email' => $email,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => 'We could not send the verification email. Please try again shortly.',
+            ]);
+        }
     }
 
     /**
