@@ -60,20 +60,20 @@
             [
                 'title' => 'Campaign request handling',
                 'body' => 'Submit the brief once. We validate the list, count segments, and return a firm cost before anything is sent.',
-                'image' => 'images/marketing/service-campaigns.jpg',
+                'image' => 'images/service-campaigns.jpg',
                 'alt' => 'An operations specialist reviewing a campaign request on screen',
             ],
             [
                 'title' => 'List cleaning & validation',
                 'body' => 'Malformed numbers, duplicates, and unreachable rows are stripped out so you only pay for contacts we can deliver to.',
-                'image' => 'images/marketing/service-lists.jpg',
-                'alt' => 'A team reviewing recipient data on a laptop',
+                'image' => 'images/service-lists.jpg',
+                'alt' => 'A specialist validating recipient phone numbers on a laptop',
             ],
             [
                 'title' => 'Invoicing & fulfilment',
                 'body' => 'Download the invoice, submit your payment reference, and track the campaign through to a completed send.',
-                'image' => 'images/marketing/service-billing.jpg',
-                'alt' => 'A finance colleague reconciling invoices at a desk',
+                'image' => 'images/service-billing.jpg',
+                'alt' => 'A colleague reviewing campaign invoices and payment references',
             ],
         ];
 
@@ -334,8 +334,8 @@
                 <div class="relative mx-auto w-full max-w-md lg:max-w-none" data-reveal="scale" data-reveal-delay="200">
                     <div class="relative rounded-[2.25rem] border border-white/15 bg-white/5 p-3 shadow-2xl shadow-black/40 backdrop-blur-sm">
                         <x-marketing.photo
-                            src="images/marketing/hero-portal.jpg"
-                            alt="The campaign portal showing a request moving from quote to fulfilment"
+                            src="images/hero-portal.png"
+                            alt="The campaign portal on a laptop with an SMS confirmation on a phone"
                             ratio="aspect-[4/5]"
                             rounded="rounded-[1.75rem]"
                             label="Hero visual"
@@ -370,15 +370,17 @@
             {{-- Capability strip that overlaps the section below (z-index keeps it above the mist background). --}}
             <div class="relative z-20 mx-auto -mb-16 max-w-6xl px-4 sm:px-6 lg:-mb-20 lg:px-8">
                 <div class="grid gap-4 lg:grid-cols-[0.85fr_2fr]">
-                    <div class="relative overflow-hidden rounded-3xl" data-reveal="left">
+                    <div class="relative overflow-hidden rounded-3xl bg-ink" data-reveal="left">
                         <x-marketing.photo
-                            src="images/marketing/how-it-works.jpg"
-                            alt="Two colleagues planning an SMS campaign together"
-                            ratio="aspect-[16/10] lg:aspect-auto lg:h-full"
+                            src="images/SMS-Hero-Picture-Holder.png"
+                            alt="Campaign studio with cleaned recipients, delivery health, and invoice ready"
+                            ratio="aspect-[4/5] lg:aspect-auto lg:min-h-[22rem] lg:h-full"
                             rounded="rounded-3xl"
-                            label="Team photo"
+                            fit="contain"
+                            label="How it works visual"
+                            class="bg-ink"
                         />
-                        <div class="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-t from-ink/85 via-ink/20 to-transparent"></div>
+                        <div class="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-t from-ink/90 via-ink/25 to-transparent"></div>
                         <div class="absolute inset-x-5 bottom-5">
                             <p class="text-base font-semibold text-white">How does it work?</p>
                             <a href="#how-it-works" class="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-signal">
@@ -416,8 +418,8 @@
             <div class="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
                 <div class="relative" data-reveal="left">
                     <x-marketing.photo
-                        src="images/marketing/about-team.jpg"
-                        alt="The operations team reviewing campaign requests"
+                        src="images/about-team.jpg"
+                        alt="The operations team reviewing SMS campaign performance for Ghana"
                         ratio="aspect-[4/3]"
                         label="About photo"
                     />

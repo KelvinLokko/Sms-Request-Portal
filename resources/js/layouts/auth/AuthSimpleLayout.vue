@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { home } from '@/routes';
 
@@ -17,8 +17,8 @@ const brand = usePage().props.name;
         <div
             class="auth-panel-glow relative flex items-center gap-3 overflow-hidden px-5 py-4 text-white lg:hidden"
         >
-            <Link
-                :href="home()"
+            <a
+                :href="home.url()"
                 class="relative z-10 inline-flex items-center gap-3 transition-opacity hover:opacity-90"
             >
                 <span
@@ -29,7 +29,7 @@ const brand = usePage().props.name;
                 <span class="text-base font-semibold tracking-tight">
                     {{ brand }}
                 </span>
-            </Link>
+            </a>
         </div>
 
         <!-- Desktop brand panel -->
@@ -71,8 +71,8 @@ const brand = usePage().props.name;
                 </svg>
             </div>
 
-            <Link
-                :href="home()"
+            <a
+                :href="home.url()"
                 class="relative z-10 inline-flex items-center gap-3 self-start transition-opacity hover:opacity-90"
             >
                 <span
@@ -83,7 +83,7 @@ const brand = usePage().props.name;
                 <span class="text-lg font-semibold tracking-tight">
                     {{ brand }}
                 </span>
-            </Link>
+            </a>
 
             <div class="relative z-10 max-w-md animate-fade-up">
                 <p

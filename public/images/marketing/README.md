@@ -1,22 +1,20 @@
-# Marketing images
+# Landing page images
 
-Drop image files here using the exact filenames below and they replace the dashed
-placeholders on the landing page automatically — no code change needed. Any file
-that is missing keeps rendering its placeholder, so the page never breaks.
+Images live in `public/images/` (one level up). The landing page references them
+from `resources/views/marketing/home.blade.php`.
 
-| Filename                 | Used for                     | Aspect ratio | Suggested size |
-| ------------------------ | ---------------------------- | ------------ | -------------- |
-| `hero-portal.jpg`        | Hero device frame            | 4:5          | 900 × 1125     |
-| `how-it-works.jpg`       | "How does it work?" card     | 16:10 / tall | 800 × 900      |
-| `about-team.jpg`         | About section                | 4:3          | 1200 × 900     |
-| `service-campaigns.jpg`  | Services card 1              | 16:10        | 960 × 600      |
-| `service-lists.jpg`      | Services card 2              | 16:10        | 960 × 600      |
-| `service-billing.jpg`    | Services card 3              | 16:10        | 960 × 600      |
+| File                         | Used for                 | Aspect |
+| ---------------------------- | ------------------------ | ------ |
+| `hero-portal.png`            | Hero device frame        | 4:5    |
+| `SMS-Hero-Picture-Holder.png`| "How does it work?" card | 16:10  |
+| `about-team.jpg`             | About section            | 4:3    |
+| `service-campaigns.jpg`      | Services — campaigns     | 16:10  |
+| `service-lists.jpg`          | Services — list cleaning | 16:10  |
+| `service-billing.jpg`        | Services — invoicing     | 16:10  |
 
 Notes:
 
-- Compress before committing (aim for under ~200 KB each). WebP works too — rename
-  the reference in `resources/views/marketing/home.blade.php` if you switch format.
-- Images are cropped with `object-cover`, so keep the subject near the centre.
-- Alt text lives beside each `<x-marketing.photo>` call in the landing page; update it
-  to describe the photo you actually use.
+- Compress before committing when you can (aim under ~300 KB each).
+- Images use `object-cover`, so keep the subject near the centre.
+- After changing images on production, rebuild the Docker image
+  (`docker compose up -d --build`) so `sms-web` picks them up.

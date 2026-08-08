@@ -5,21 +5,23 @@
     'rounded' => 'rounded-3xl',
     'label' => 'Photo',
     'eager' => false,
+    'fit' => 'cover',
 ])
 
 @php
     $path = $src ? ltrim($src, '/') : null;
     $hasImage = $path !== null && is_file(public_path($path));
+    $objectFit = $fit === 'contain' ? 'object-contain' : 'object-cover';
 @endphp
 
 @if ($hasImage)
     <img
-        src="{{ asset($path) }}"
+        src="/{{ $path }}"
         alt="{{ $alt }}"
         loading="{{ $eager ? 'eager' : 'lazy' }}"
         fetchpriority="{{ $eager ? 'high' : 'auto' }}"
         decoding="async"
-        {{ $attributes->class(['h-full w-full object-cover', $ratio, $rounded]) }}
+        {{ $attributes->class(['h-full w-full', $objectFit, $ratio, $rounded]) }}
     >
 @else
     <div
