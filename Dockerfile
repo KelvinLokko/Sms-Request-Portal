@@ -82,8 +82,12 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-app.ini
 COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-app.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+# PHP-FPM runs as www-data. Build context / COPY can leave files as root:640,
+# which makes FPM return "File not found." for every request.
 RUN chmod +x /usr/local/bin/entrypoint.sh \
-    && chown -R www-data:www-data storage bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html \
+    && find /var/www/html -type d -exec chmod 755 {} \; \
+    && find /var/www/html -type f -exec chmod 644 {} \; \
     && chmod -R ug+rwx storage bootstrap/cache
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
@@ -93,3 +97,6 @@ FROM nginx:1.27-alpine AS web
 
 COPY --from=builder /app/public /var/www/html/public
 COPY docker/nginx/app.conf /etc/nginx/conf.d/default.conf
+
+RUN find /var/www/html/public -type d -exec chmod 755 {} \; \
+    && find /var/www/html/public -type f -exec chmod 644 {} \;
