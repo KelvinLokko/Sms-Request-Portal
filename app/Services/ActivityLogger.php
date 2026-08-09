@@ -25,10 +25,7 @@ class ActivityLogger
 
         return ActivityLog::query()->create([
             'user_id' => $actor?->id,
-            'company_id' => $actor?->currentCompanyId()
-                ?? (array_key_exists('company_id', $subject?->getAttributes() ?? [])
-                    ? (int) $subject->getAttributes()['company_id']
-                    : null),
+            'company_id' => $this->resolveCompanyId($actor, $subject, $properties),
             'action' => $action,
             'subject_type' => $subject?->getMorphClass(),
             'subject_id' => $subject?->getKey(),
@@ -37,6 +34,37 @@ class ActivityLogger
             'user_agent' => $request->userAgent(),
             'created_at' => now(),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $properties
+     */
+    private function resolveCompanyId(?User $actor, ?Model $subject, array $properties): ?int
+    {
+        $fromActor = $actor?->currentCompanyId();
+
+        if ($fromActor !== null) {
+            return $fromActor;
+        }
+
+        if (array_key_exists('company_id', $properties)) {
+            return $this->nullableInt($properties['company_id']);
+        }
+
+        if ($subject !== null && array_key_exists('company_id', $subject->getAttributes())) {
+            return $this->nullableInt($subject->getAttributes()['company_id']);
+        }
+
+        return null;
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (int) $value;
     }
 
     /**

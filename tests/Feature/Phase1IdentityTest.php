@@ -264,6 +264,29 @@ it('resolves company-specific rates over the platform default', function () {
         ->and($resolved->rate_per_sms)->toBe('0.025000');
 });
 
+it('saves a platform default client rate without activity log FK errors', function () {
+    $admin = $this->createPlatformAdmin();
+
+    $this->actingAs($admin)
+        ->post(route('admin.rates.store'), [
+            'company_id' => null,
+            'rate_per_sms' => '0.050000',
+            'effective_from' => now()->toDateString(),
+        ])
+        ->assertRedirect();
+
+    $rate = CompanyRate::query()->whereNull('company_id')->latest('id')->first();
+
+    expect($rate)->not->toBeNull()
+        ->and($rate->rate_per_sms)->toBe('0.050000');
+
+    $this->assertDatabaseHas('activity_logs', [
+        'action' => 'company_rate.created',
+        'subject_id' => $rate->id,
+        'company_id' => null,
+    ]);
+});
+
 it('lists active tax rates by effective date', function () {
     TaxRate::factory()->create([
         'name' => 'Future tax',
