@@ -284,37 +284,7 @@
                         Upload your list, get a clear quote and invoice, then we send the campaign for you — no self-service gateway to learn.
                     </p>
 
-                    <div class="mt-9 flex flex-wrap items-center gap-3" data-reveal data-reveal-delay="240">
-                        @auth
-                            <a href="{{ route('dashboard') }}" class="btn-lime">
-                                Go to dashboard
-                                <svg viewBox="0 0 24 24" fill="none" class="size-4" aria-hidden="true">
-                                    <path d="M5 12h13m0 0-5-5m5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </a>
-                        @else
-                            <a href="{{ route('register') }}" class="btn-lime">
-                                Create an account
-                                <svg viewBox="0 0 24 24" fill="none" class="size-4" aria-hidden="true">
-                                    <path d="M5 12h13m0 0-5-5m5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </a>
-                            <a href="{{ route('login') }}" class="btn-outline-light">Log in</a>
-                        @endauth
-                        <a
-                            href="#how-it-works"
-                            class="inline-flex min-h-11 items-center gap-3 rounded-full px-2 text-sm font-semibold text-white/85 transition hover:text-white"
-                        >
-                            <span class="flex size-11 items-center justify-center rounded-full border border-white/25 bg-white/10">
-                                <svg viewBox="0 0 24 24" fill="none" class="size-4" aria-hidden="true">
-                                    <path d="M8 5.5v13l11-6.5-11-6.5Z" fill="currentColor"/>
-                                </svg>
-                            </span>
-                            See how it works
-                        </a>
-                    </div>
-
-                    <dl class="mt-12 flex flex-wrap items-center gap-x-10 gap-y-6" data-reveal data-reveal-delay="320">
+                    <dl class="mt-10 flex flex-wrap items-center gap-x-10 gap-y-6" data-reveal data-reveal-delay="240">
                         <div>
                             <dt class="text-xs font-medium tracking-wide text-white/60 uppercase">Delivery rate</dt>
                             <dd class="mt-1 text-3xl font-bold">
@@ -333,15 +303,15 @@
 
                 {{-- Product visual: photo slot inside a device frame, with floating status cards --}}
                 <div class="relative mx-auto w-full max-w-md lg:max-w-none" data-reveal="scale" data-reveal-delay="200">
-                    <div class="relative rounded-[2.25rem] border border-white/15 bg-white/5 p-3 shadow-2xl shadow-black/40 backdrop-blur-sm">
+                    <div class="relative overflow-hidden rounded-[2.25rem] shadow-2xl shadow-black/40">
                         <x-marketing.photo
                             src="images/hero-portal.png"
                             alt="The campaign portal on a laptop with an SMS confirmation on a phone"
                             ratio="aspect-[4/5]"
-                            rounded="rounded-[1.75rem]"
+                            rounded="rounded-[2.25rem]"
                             label="Hero visual"
                             :eager="true"
-                            class="border-white/20 text-white/70"
+                            class="text-white/70"
                         />
 
                         <div class="pointer-events-none absolute inset-x-6 bottom-6 rounded-2xl bg-ink/85 p-4 backdrop-blur-sm">
