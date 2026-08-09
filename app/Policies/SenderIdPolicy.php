@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\PlatformPermission;
+use App\Enums\SenderIdStatus;
 use App\Models\SenderId;
 use App\Models\User;
 
@@ -40,6 +41,11 @@ class SenderIdPolicy
         }
 
         if ($user->currentCompanyId() !== $senderId->company_id) {
+            return false;
+        }
+
+        // Once reviewed (approved/rejected), the sender ID is locked.
+        if ($senderId->status !== SenderIdStatus::Pending) {
             return false;
         }
 

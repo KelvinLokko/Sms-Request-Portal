@@ -3,6 +3,8 @@ import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { alertDialog, confirmDialog } from '@/composables/useConfirmDialog';
 import { index as rolesIndex } from '@/routes/admin/roles';
 import { index } from '@/routes/admin/users';
 
@@ -32,7 +35,7 @@ type UserRow = {
 };
 
 const props = defineProps<{
-    users: { data: UserRow[] };
+    users: Paginated<UserRow>;
     filters: { type: string | null; q: string | null };
     companies: { id: number; name: string }[];
     platformRoles: { value: string; label: string }[];
@@ -50,8 +53,8 @@ const createOpen = ref(false);
 const createType = ref<'staff' | 'client'>('staff');
 const editId = ref<number | null>(null);
 
-const editing = computed(() =>
-    props.users.data.find((user) => user.id === editId.value) ?? null,
+const editing = computed(
+    () => props.users.data.find((user) => user.id === editId.value) ?? null,
 );
 
 function openCreate() {
@@ -95,14 +98,28 @@ function cancelEdit() {
     editId.value = null;
 }
 
-function destroyUser(user: UserRow) {
+async function destroyUser(user: UserRow) {
     if (user.is_self) {
-        alert('You cannot delete your own account.');
+        await alertDialog({
+            title: 'Cannot delete your account',
+            description: 'You cannot delete your own account.',
+        });
+
         return;
     }
-    if (!confirm(`Delete ${user.name}? This cannot be undone.`)) {
+
+    const confirmed = await confirmDialog({
+        title: `Delete ${user.name}?`,
+        description: 'This cannot be undone.',
+        confirmLabel: 'Delete user',
+        cancelLabel: 'Keep user',
+        variant: 'destructive',
+    });
+
+    if (!confirmed) {
         return;
     }
+
     router.delete(UserController.destroy.url(user.id));
 }
 </script>
@@ -133,7 +150,8 @@ function destroyUser(user: UserRow) {
                 <DialogHeader>
                     <DialogTitle>Create user</DialogTitle>
                     <DialogDescription>
-                        Add a platform staff member or a client user for a company.
+                        Add a platform staff member or a client user for a
+                        company.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -252,7 +270,9 @@ function destroyUser(user: UserRow) {
                             <InputError :message="errors.company_id" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="create_company_role">Company role</Label>
+                            <Label for="create_company_role"
+                                >Company role</Label
+                            >
                             <select
                                 id="create_company_role"
                                 name="company_role"
@@ -353,8 +373,12 @@ function destroyUser(user: UserRow) {
                                 {{ user.platform_roles.join(', ') || '—' }}
                             </template>
                             <template v-else>
-                                <div>{{ user.company?.name ?? 'No company' }}</div>
-                                <div class="text-xs text-muted-foreground capitalize">
+                                <div>
+                                    {{ user.company?.name ?? 'No company' }}
+                                </div>
+                                <div
+                                    class="text-xs text-muted-foreground capitalize"
+                                >
                                     {{ user.company_role ?? '—' }}
                                 </div>
                             </template>
@@ -391,7 +415,12 @@ function destroyUser(user: UserRow) {
             </table>
         </div>
 
-        <Dialog :open="editId !== null" @update:open="(v) => !v && cancelEdit()">
+        <ListPagination :paginator="users" />
+
+        <Dialog
+            :open="editId !== null"
+            @update:open="(v) => !v && cancelEdit()"
+        >
             <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Edit {{ editing?.name }}</DialogTitle>
@@ -432,7 +461,9 @@ function destroyUser(user: UserRow) {
                             <InputError :message="errors.email" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="edit_password">New password (optional)</Label>
+                            <Label for="edit_password"
+                                >New password (optional)</Label
+                            >
                             <Input
                                 id="edit_password"
                                 name="password"
@@ -516,7 +547,11 @@ function destroyUser(user: UserRow) {
                     </div>
 
                     <DialogFooter class="gap-2 sm:justify-end">
-                        <Button type="button" variant="outline" @click="cancelEdit">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            @click="cancelEdit"
+                        >
                             Cancel
                         </Button>
                         <Button type="submit" :disabled="processing">

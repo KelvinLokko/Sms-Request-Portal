@@ -60,7 +60,6 @@ defineOptions({
     },
 });
 
-
 const revenueCanvas = ref<HTMLCanvasElement | null>(null);
 const requestsCanvas = ref<HTMLCanvasElement | null>(null);
 const smsCanvas = ref<HTMLCanvasElement | null>(null);
@@ -85,7 +84,9 @@ function buildCharts() {
                     datasets: [
                         {
                             label: 'Revenue (pesewas)',
-                            data: props.monthly.revenue.map((r) => r.value ?? 0),
+                            data: props.monthly.revenue.map(
+                                (r) => r.value ?? 0,
+                            ),
                             backgroundColor: 'rgba(15, 118, 110, 0.7)',
                         },
                     ],
@@ -107,7 +108,9 @@ function buildCharts() {
                     datasets: [
                         {
                             label: 'Submitted requests',
-                            data: props.monthly.requests.map((r) => r.value ?? 0),
+                            data: props.monthly.requests.map(
+                                (r) => r.value ?? 0,
+                            ),
                             borderColor: 'rgb(37, 99, 235)',
                             tension: 0.25,
                         },
@@ -127,7 +130,9 @@ function buildCharts() {
                     datasets: [
                         {
                             label: 'SMS volume (recipients × pages)',
-                            data: props.monthly.sms_volume.map((r) => r.value ?? 0),
+                            data: props.monthly.sms_volume.map(
+                                (r) => r.value ?? 0,
+                            ),
                             backgroundColor: 'rgba(180, 83, 9, 0.7)',
                         },
                     ],
@@ -182,15 +187,21 @@ onBeforeUnmount(destroyCharts);
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <div class="rounded-xl border p-4">
                 <p class="text-xs text-muted-foreground">Pending review</p>
-                <p class="mt-1 text-2xl font-medium">{{ summary.pending_review }}</p>
+                <p class="mt-1 text-2xl font-medium">
+                    {{ summary.pending_review }}
+                </p>
             </div>
             <div class="rounded-xl border p-4">
                 <p class="text-xs text-muted-foreground">Awaiting fulfilment</p>
-                <p class="mt-1 text-2xl font-medium">{{ summary.awaiting_fulfilment }}</p>
+                <p class="mt-1 text-2xl font-medium">
+                    {{ summary.awaiting_fulfilment }}
+                </p>
             </div>
             <div class="rounded-xl border p-4">
                 <p class="text-xs text-muted-foreground">Pending payments</p>
-                <p class="mt-1 text-2xl font-medium">{{ summary.pending_payments }}</p>
+                <p class="mt-1 text-2xl font-medium">
+                    {{ summary.pending_payments }}
+                </p>
             </div>
             <div class="rounded-xl border p-4">
                 <p class="text-xs text-muted-foreground">Fulfilled</p>
@@ -203,7 +214,11 @@ onBeforeUnmount(destroyCharts);
             <div class="rounded-xl border p-4">
                 <p class="text-xs text-muted-foreground">Avg turnaround</p>
                 <p class="mt-1 text-2xl font-medium">
-                    {{ avg_turnaround_hours === null ? '—' : `${avg_turnaround_hours}h` }}
+                    {{
+                        avg_turnaround_hours === null
+                            ? '—'
+                            : `${avg_turnaround_hours}h`
+                    }}
                 </p>
             </div>
         </div>
@@ -211,11 +226,17 @@ onBeforeUnmount(destroyCharts);
         <div class="grid gap-6 lg:grid-cols-2">
             <section class="rounded-xl border p-4">
                 <h2 class="mb-3 text-sm font-medium">Monthly revenue</h2>
-                <canvas ref="revenueCanvas" aria-label="Monthly revenue chart" />
+                <canvas
+                    ref="revenueCanvas"
+                    aria-label="Monthly revenue chart"
+                />
             </section>
             <section class="rounded-xl border p-4">
                 <h2 class="mb-3 text-sm font-medium">Request volume</h2>
-                <canvas ref="requestsCanvas" aria-label="Request volume chart" />
+                <canvas
+                    ref="requestsCanvas"
+                    aria-label="Request volume chart"
+                />
             </section>
             <section class="rounded-xl border p-4">
                 <h2 class="mb-3 text-sm font-medium">SMS volume</h2>

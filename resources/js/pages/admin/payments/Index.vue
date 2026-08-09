@@ -1,9 +1,20 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { EllipsisVertical } from '@lucide/vue';
 import { ref } from 'vue';
 import PaymentReviewController from '@/actions/App/Http/Controllers/Admin/PaymentReviewController';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
+import RejectReasonDialog from '@/components/RejectReasonDialog.vue';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { confirmDialog } from '@/composables/useConfirmDialog';
 import { index, report } from '@/routes/admin/payments';
 
 type Row = {
@@ -26,7 +37,7 @@ type Row = {
 };
 
 defineProps<{
-    payments: { data: Row[] };
+    payments: Paginated<Row>;
 }>();
 
 defineOptions({
@@ -35,24 +46,50 @@ defineOptions({
     },
 });
 
-const rejectReason = ref<Record<number, string>>({});
+const rejectOpen = ref(false);
+const rejectTarget = ref<Row | null>(null);
 
-function verify(id: number) {
-    if (!confirm('Mark this payment as verified?')) {
-        return;
+function formatDate(value: string | null): string {
+    if (!value) {
+        return '—';
     }
-    router.post(PaymentReviewController.verify.url(id));
+
+    return new Date(value).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
 }
 
-function reject(id: number) {
-    const reason = rejectReason.value[id]?.trim();
-    if (!reason) {
-        alert('A rejection reason is required.');
+async function verify(row: Row) {
+    const confirmed = await confirmDialog({
+        title: 'Mark payment as verified?',
+        description:
+            'This will confirm the Mobile Money payment against the invoice.',
+        confirmLabel: 'Verify payment',
+        cancelLabel: 'Not yet',
+    });
+
+    if (!confirmed) {
         return;
     }
-    router.post(PaymentReviewController.reject.url(id), {
+
+    router.post(PaymentReviewController.verify.url(row.id));
+}
+
+function openReject(row: Row) {
+    rejectTarget.value = row;
+    rejectOpen.value = true;
+}
+
+function confirmReject(reason: string) {
+    if (!rejectTarget.value) {
+        return;
+    }
+
+    router.post(PaymentReviewController.reject.url(rejectTarget.value.id), {
         rejection_reason: reason,
     });
+    rejectTarget.value = null;
 }
 </script>
 
@@ -69,25 +106,31 @@ function reject(id: number) {
                 <Link :href="report()">Payment history</Link>
             </Button>
         </div>
+
         <div class="overflow-x-auto rounded-xl border">
-            <table class="w-full min-w-[52rem] text-left text-sm">
+            <table class="w-full min-w-[56rem] text-left text-sm">
                 <thead class="border-b bg-muted/40">
                     <tr>
                         <th class="px-4 py-3 font-medium">Invoice</th>
                         <th class="px-4 py-3 font-medium">Company</th>
                         <th class="px-4 py-3 font-medium">MoMo details</th>
                         <th class="px-4 py-3 font-medium">Amount</th>
-                        <th class="px-4 py-3 font-medium">Actions</th>
+                        <th class="px-4 py-3 font-medium">Submitted</th>
+                        <th class="w-14 px-4 py-3 font-medium">
+                            <span class="sr-only">Actions</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
                         v-for="row in payments.data"
                         :key="row.id"
-                        class="border-b align-top last:border-0"
+                        class="border-b last:border-0"
                     >
                         <td class="px-4 py-3">
-                            <div class="font-mono text-xs">{{ row.invoice.number }}</div>
+                            <div class="font-mono text-xs">
+                                {{ row.invoice.number }}
+                            </div>
                             <div class="text-muted-foreground">
                                 {{ row.invoice.campaign_reference }}
                             </div>
@@ -95,11 +138,14 @@ function reject(id: number) {
                         <td class="px-4 py-3">
                             <div>{{ row.company.name }}</div>
                             <div class="text-xs text-muted-foreground">
-                                {{ row.submitter.name }} · {{ row.submitter.email }}
+                                {{ row.submitter.name }} ·
+                                {{ row.submitter.email }}
                             </div>
                         </td>
                         <td class="px-4 py-3">
-                            <div class="font-mono text-xs">{{ row.momo_reference }}</div>
+                            <div class="font-mono text-xs">
+                                {{ row.momo_reference }}
+                            </div>
                             <div>{{ row.payer_number }}</div>
                             <a
                                 v-if="row.proof_url"
@@ -110,29 +156,40 @@ function reject(id: number) {
                             </a>
                         </td>
                         <td class="px-4 py-3">{{ row.amount }}</td>
-                        <td class="px-4 py-3">
-                            <div class="flex max-w-sm flex-col gap-2">
-                                <Button size="sm" @click="verify(row.id)">
-                                    Verify
-                                </Button>
-                                <textarea
-                                    v-model="rejectReason[row.id]"
-                                    class="min-h-16 w-full rounded-md border bg-background px-2 py-1 text-sm"
-                                    placeholder="Rejection reason"
-                                />
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    @click="reject(row.id)"
-                                >
-                                    Reject
-                                </Button>
-                            </div>
+                        <td
+                            class="px-4 py-3 whitespace-nowrap text-muted-foreground"
+                        >
+                            {{ formatDate(row.created_at) }}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger as-child>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        :aria-label="`Actions for ${row.invoice.number}`"
+                                    >
+                                        <EllipsisVertical class="size-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem @click="verify(row)">
+                                        Verify
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        class="text-destructive focus:text-destructive"
+                                        @click="openReject(row)"
+                                    >
+                                        Reject
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </td>
                     </tr>
                     <tr v-if="payments.data.length === 0">
                         <td
-                            colspan="5"
+                            colspan="6"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
                             No payments awaiting verification.
@@ -141,5 +198,19 @@ function reject(id: number) {
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="payments" />
+
+        <RejectReasonDialog
+            v-model:open="rejectOpen"
+            :title="
+                rejectTarget
+                    ? `Reject payment for ${rejectTarget.invoice.number}?`
+                    : 'Reject payment'
+            "
+            description="Provide a clear reason. This will be shown on the invoice."
+            confirm-label="Reject payment"
+            @confirm="confirmReject"
+        />
     </div>
 </template>

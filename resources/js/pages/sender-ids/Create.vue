@@ -21,7 +21,7 @@ defineOptions({
 <template>
     <Head title="Register sender ID" />
 
-    <div class="mx-auto flex max-w-lg flex-col gap-6 p-4">
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <Heading
             title="Register sender ID"
             description="Letters, numbers and spaces only — maximum 11 characters."

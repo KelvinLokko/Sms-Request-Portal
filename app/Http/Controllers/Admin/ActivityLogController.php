@@ -18,6 +18,7 @@ class ActivityLogController extends Controller
             ->with(['user:id,name,email', 'company:id,name'])
             ->latest('id')
             ->paginate(30)
+            ->withQueryString()
             ->through(fn (ActivityLog $log) => [
                 'id' => $log->id,
                 'action' => $log->action,

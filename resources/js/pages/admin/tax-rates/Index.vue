@@ -2,6 +2,8 @@
 import { Form, Head } from '@inertiajs/vue3';
 import TaxRateController from '@/actions/App/Http/Controllers/Admin/TaxRateController';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +20,7 @@ type TaxRow = {
 };
 
 defineProps<{
-    taxRates: { data: TaxRow[] };
+    taxRates: Paginated<TaxRow>;
 }>();
 
 defineOptions({
@@ -26,7 +28,6 @@ defineOptions({
         breadcrumbs: [{ title: 'Tax rates', href: index() }],
     },
 });
-
 </script>
 
 <template>
@@ -108,5 +109,7 @@ defineOptions({
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="taxRates" />
     </div>
 </template>

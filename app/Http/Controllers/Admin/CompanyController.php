@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectCompanyRequest;
 use App\Models\Company;
 use App\Services\ActivityLogger;
+use App\Support\ListFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,13 +19,32 @@ class CompanyController extends Controller
     {
         $this->authorize('viewAny', Company::class);
 
-        $status = $request->string('status')->toString();
+        $filters = ListFilters::fromRequest($request);
+        $status = $filters['status'];
 
         $companies = Company::query()
+            ->with(['approver:id,name'])
             ->withCount('users')
             ->when(
-                $status !== '' && CompanyStatus::tryFrom($status),
+                $status !== null && CompanyStatus::tryFrom($status),
                 fn ($query) => $query->where('status', $status),
+            )
+            ->tap(fn ($query) => ListFilters::applyDateRange(
+                $query,
+                $filters['from'],
+                $filters['to'],
+            ))
+            ->when(
+                $filters['q'] !== null,
+                function ($query) use ($filters): void {
+                    $term = '%'.$filters['q'].'%';
+
+                    $query->where(function ($inner) use ($term): void {
+                        $inner->where('name', 'like', $term)
+                            ->orWhere('email', 'like', $term)
+                            ->orWhere('phone', 'like', $term);
+                    });
+                },
             )
             ->latest()
             ->paginate(20)
@@ -39,13 +59,22 @@ class CompanyController extends Controller
                 'users_count' => $company->users_count,
                 'rejection_reason' => $company->rejection_reason,
                 'created_at' => $company->created_at?->toIso8601String(),
+                'approved_at' => $company->approved_at?->toIso8601String(),
+                'approver' => $company->approver
+                    ? ['name' => $company->approver->name]
+                    : null,
             ]);
 
         return Inertia::render('admin/companies/Index', [
             'companies' => $companies,
-            'filters' => [
-                'status' => $status !== '' ? $status : null,
-            ],
+            'filters' => $filters,
+            'statusOptions' => collect(CompanyStatus::cases())
+                ->map(fn (CompanyStatus $status) => [
+                    'value' => $status->value,
+                    'label' => $status->label(),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 

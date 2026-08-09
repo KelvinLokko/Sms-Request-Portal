@@ -7,12 +7,15 @@ use App\Enums\SmsRequestStatus;
 use App\Jobs\GenerateInvoicePdfJob;
 use App\Models\CompanyRate;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Payment;
 use App\Models\PaymentTransaction;
 use App\Models\SmsRequest;
 use App\Models\TaxRate;
+use App\Support\PrivateStorage;
 use App\Support\TaxCalculator;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\URL;
 use Tests\Concerns\CreatesCompanies;
 
 uses(CreatesCompanies::class);
@@ -226,4 +229,40 @@ it('rejects a pending payment with a reason and leaves the invoice open', functi
     expect($payment->fresh()->status)->toBe(PaymentStatus::Rejected)
         ->and($invoice->fresh()->status)->toBe(InvoiceStatus::Issued)
         ->and($campaign->fresh()->status)->toBe(SmsRequestStatus::Invoiced);
+});
+
+it('generates and downloads an invoice pdf on demand when missing', function () {
+    [$user, $company] = $this->createApprovedCompanyOwner();
+
+    $campaign = SmsRequest::factory()->submitted()->create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'status' => SmsRequestStatus::Invoiced,
+    ]);
+
+    $invoice = Invoice::factory()->create([
+        'company_id' => $company->id,
+        'sms_request_id' => $campaign->id,
+        'pdf_path' => null,
+    ]);
+
+    InvoiceItem::factory()->create([
+        'invoice_id' => $invoice->id,
+    ]);
+
+    $url = URL::temporarySignedRoute(
+        'invoices.pdf',
+        now()->addMinutes(30),
+        ['invoice' => $invoice->id],
+    );
+
+    $this->actingAs($user)
+        ->get($url)
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+
+    $invoice->refresh();
+
+    expect($invoice->pdf_path)->not->toBeNull()
+        ->and(PrivateStorage::disk()->exists($invoice->pdf_path))->toBeTrue();
 });

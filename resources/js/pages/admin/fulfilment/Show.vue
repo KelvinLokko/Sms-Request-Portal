@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { confirmDialog } from '@/composables/useConfirmDialog';
 import { index } from '@/routes/admin/fulfilment';
 
 type Campaign = {
@@ -65,12 +66,16 @@ async function copyText(label: string, value: string) {
     }
 }
 
-function markFulfilled() {
-    if (
-        !confirm(
-            'Confirm this campaign was sent in Deywuro and mark it fulfilled?',
-        )
-    ) {
+async function markFulfilled() {
+    const confirmed = await confirmDialog({
+        title: 'Mark campaign as fulfilled?',
+        description:
+            'Confirm this campaign was sent in Deywuro and mark it fulfilled.',
+        confirmLabel: 'Mark fulfilled',
+        cancelLabel: 'Not yet',
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -83,6 +88,7 @@ function formatWhen(value: string | null): string {
     if (!value) {
         return '—';
     }
+
     return new Date(value).toLocaleString();
 }
 </script>
@@ -90,7 +96,7 @@ function formatWhen(value: string | null): string {
 <template>
     <Head :title="`Fulfil ${campaign.reference}`" />
 
-    <div class="mx-auto flex max-w-3xl flex-col gap-6 p-4">
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-4 sm:p-6 lg:p-8">
         <Heading
             :title="campaign.reference"
             :description="`${campaign.status_label} · ${campaign.company.name}`"
@@ -122,7 +128,9 @@ function formatWhen(value: string | null): string {
                 <Button
                     size="sm"
                     variant="outline"
-                    @click="copyText('Campaign name', campaign.portal_campaign_name)"
+                    @click="
+                        copyText('Campaign name', campaign.portal_campaign_name)
+                    "
                 >
                     Copy name
                 </Button>
@@ -134,7 +142,12 @@ function formatWhen(value: string | null): string {
                 </div>
                 <div>
                     <dt class="text-muted-foreground">Billable recipients</dt>
-                    <dd>{{ campaign.billable_recipients?.toLocaleString() ?? '—' }}</dd>
+                    <dd>
+                        {{
+                            campaign.billable_recipients?.toLocaleString() ??
+                            '—'
+                        }}
+                    </dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground">Requested send</dt>
@@ -175,9 +188,9 @@ function formatWhen(value: string | null): string {
                     Copy message
                 </Button>
             </div>
-            <pre class="whitespace-pre-wrap rounded-xl border bg-muted/30 p-4 text-sm">{{
-                campaign.message_body
-            }}</pre>
+            <pre
+                class="rounded-xl border bg-muted/30 p-4 text-sm whitespace-pre-wrap"
+                >{{ campaign.message_body }}</pre>
         </section>
 
         <section class="flex flex-wrap gap-3">
@@ -188,14 +201,12 @@ function formatWhen(value: string | null): string {
             </Button>
         </section>
 
-        <section
-            v-if="can.fulfil"
-            class="space-y-4 rounded-xl border p-4"
-        >
+        <section v-if="can.fulfil" class="space-y-4 rounded-xl border p-4">
             <h2 class="text-sm font-medium">Mark as sent in Deywuro</h2>
             <p class="text-sm text-muted-foreground">
-                After you send the campaign in Deywuro, record it here. The optional job
-                reference is internal only and never shown to the client.
+                After you send the campaign in Deywuro, record it here. The
+                optional job reference is internal only and never shown to the
+                client.
             </p>
             <div class="space-y-2">
                 <Label for="deywuro_job_reference">
@@ -208,9 +219,7 @@ function formatWhen(value: string | null): string {
                     placeholder="Internal bookkeeping only"
                 />
             </div>
-            <Button @click="markFulfilled">
-                Mark as fulfilled
-            </Button>
+            <Button @click="markFulfilled"> Mark as fulfilled </Button>
         </section>
     </div>
 </template>

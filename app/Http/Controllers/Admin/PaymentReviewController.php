@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectPaymentRequest;
 use App\Models\Payment;
+use App\Support\ListFilters;
 use App\Support\Money;
 use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
@@ -32,6 +33,7 @@ class PaymentReviewController extends Controller
             ->where('status', PaymentStatus::Pending)
             ->latest()
             ->paginate(20)
+            ->withQueryString()
             ->through(fn (Payment $payment) => $this->row($payment));
 
         return Inertia::render('admin/payments/Index', [
@@ -43,8 +45,9 @@ class PaymentReviewController extends Controller
     {
         $this->authorize('viewAny', Payment::class);
 
-        $status = $request->string('status')->toString();
-        $search = $request->string('q')->trim()->toString();
+        $filters = ListFilters::fromRequest($request);
+        $status = $filters['status'] ?? '';
+        $search = $filters['q'] ?? '';
 
         $payments = Payment::query()
             ->with([
@@ -58,6 +61,11 @@ class PaymentReviewController extends Controller
                 in_array($status, PaymentStatus::values(), true),
                 fn ($q) => $q->where('status', $status),
             )
+            ->tap(fn ($query) => ListFilters::applyDateRange(
+                $query,
+                $filters['from'],
+                $filters['to'],
+            ))
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($inner) use ($search): void {
                     $inner->where('momo_reference', 'like', "%{$search}%")
@@ -81,10 +89,10 @@ class PaymentReviewController extends Controller
         return Inertia::render('admin/payments/Report', [
             'payments' => $payments,
             'filters' => [
+                ...$filters,
                 'status' => in_array($status, PaymentStatus::values(), true) ? $status : null,
-                'q' => $search !== '' ? $search : null,
             ],
-            'statuses' => collect(PaymentStatus::cases())->map(fn (PaymentStatus $s) => [
+            'statusOptions' => collect(PaymentStatus::cases())->map(fn (PaymentStatus $s) => [
                 'value' => $s->value,
                 'label' => $s->label(),
             ])->values()->all(),

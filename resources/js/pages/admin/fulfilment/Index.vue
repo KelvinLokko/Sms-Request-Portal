@@ -3,6 +3,8 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import FulfilmentController from '@/actions/App/Http/Controllers/Admin/FulfilmentController';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/admin/fulfilment';
 
@@ -22,7 +24,7 @@ type Row = {
 };
 
 const props = defineProps<{
-    campaigns: { data: Row[] };
+    campaigns: Paginated<Row>;
     filters: { filter: string };
     overdue_count: number;
 }>();
@@ -100,11 +102,17 @@ function formatWhen(value: string | null): string {
                         }"
                     >
                         <td class="px-4 py-3">
-                            <div class="font-mono text-xs">{{ row.reference }}</div>
-                            <div class="text-muted-foreground">{{ row.name }}</div>
+                            <div class="font-mono text-xs">
+                                {{ row.reference }}
+                            </div>
+                            <div class="text-muted-foreground">
+                                {{ row.name }}
+                            </div>
                         </td>
                         <td class="px-4 py-3">{{ row.company.name }}</td>
-                        <td class="px-4 py-3 font-mono">{{ row.sender_id ?? '—' }}</td>
+                        <td class="px-4 py-3 font-mono">
+                            {{ row.sender_id ?? '—' }}
+                        </td>
                         <td class="px-4 py-3">
                             <div>{{ formatWhen(row.hard_deadline_at) }}</div>
                             <div
@@ -123,7 +131,11 @@ function formatWhen(value: string | null): string {
                         <td class="px-4 py-3">{{ row.status_label }}</td>
                         <td class="px-4 py-3 text-right">
                             <Button as-child size="sm" variant="outline">
-                                <Link :href="FulfilmentController.show.url(row.id)">
+                                <Link
+                                    :href="
+                                        FulfilmentController.show.url(row.id)
+                                    "
+                                >
                                     Fulfil
                                 </Link>
                             </Button>
@@ -140,5 +152,7 @@ function formatWhen(value: string | null): string {
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="campaigns" />
     </div>
 </template>

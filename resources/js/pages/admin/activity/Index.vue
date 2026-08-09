@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
 import { index } from '@/routes/admin/activity';
 
 type LogRow = {
@@ -16,7 +18,7 @@ type LogRow = {
 };
 
 defineProps<{
-    logs: { data: LogRow[] };
+    logs: Paginated<LogRow>;
 }>();
 
 defineOptions({
@@ -24,7 +26,6 @@ defineOptions({
         breadcrumbs: [{ title: 'Audit log', href: index() }],
     },
 });
-
 
 function formatWhen(value: string): string {
     return new Date(value).toLocaleString();
@@ -63,7 +64,9 @@ function formatWhen(value: string): string {
                                 {{ row.ip_address ?? '—' }}
                             </div>
                         </td>
-                        <td class="px-4 py-3 font-mono text-xs">{{ row.action }}</td>
+                        <td class="px-4 py-3 font-mono text-xs">
+                            {{ row.action }}
+                        </td>
                         <td class="px-4 py-3">
                             <div v-if="row.actor">
                                 {{ row.actor.name }}
@@ -71,19 +74,31 @@ function formatWhen(value: string): string {
                                     {{ row.actor.email }}
                                 </div>
                             </div>
-                            <span v-else class="text-muted-foreground">System</span>
+                            <span v-else class="text-muted-foreground"
+                                >System</span
+                            >
                         </td>
                         <td class="px-4 py-3 text-xs">
                             <div>{{ row.company?.name ?? '—' }}</div>
                             <div class="text-muted-foreground">
                                 {{ row.subject_type ?? '—' }}
-                                <span v-if="row.subject_id">#{{ row.subject_id }}</span>
+                                <span v-if="row.subject_id"
+                                    >#{{ row.subject_id }}</span
+                                >
                             </div>
                         </td>
                         <td class="px-4 py-3">
                             <pre
-                                class="max-w-md overflow-x-auto whitespace-pre-wrap font-mono text-xs text-muted-foreground"
-                            >{{ row.properties ? JSON.stringify(row.properties, null, 2) : '—' }}</pre>
+                                class="max-w-md overflow-x-auto font-mono text-xs whitespace-pre-wrap text-muted-foreground"
+                                >{{
+                                    row.properties
+                                        ? JSON.stringify(
+                                              row.properties,
+                                              null,
+                                              2,
+                                          )
+                                        : '—'
+                                }}</pre>
                         </td>
                     </tr>
                     <tr v-if="logs.data.length === 0">
@@ -97,5 +112,7 @@ function formatWhen(value: string): string {
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="logs" />
     </div>
 </template>

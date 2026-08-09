@@ -7,6 +7,7 @@ use App\Enums\RecipientRowStatus;
 use App\Models\RecipientList;
 use App\Models\SmsRecipient;
 use App\Models\SmsRequest;
+use App\Services\SmsRequestService;
 use App\Support\CsvFormulaEscaper;
 use App\Support\PrivateStorage;
 use App\Support\Sms\GhanaNumberNormaliser;
@@ -160,13 +161,30 @@ class ValidateRecipientListJob implements ShouldBeUnique, ShouldQueue
                 'error_message' => null,
             ])->save();
 
-            SmsRequest::query()
+            $campaign = SmsRequest::query()
                 ->withoutGlobalScopes()
                 ->whereKey($list->sms_request_id)
-                ->update([
-                    'billable_recipients' => $valid,
-                ]);
+                ->first();
+
+            if ($campaign === null) {
+                return;
+            }
+
+            $campaign->forceFill([
+                'billable_recipients' => $valid,
+            ])->save();
         });
+
+        // Recalculate outside the write lock so rate resolution stays simple,
+        // and always run against a freshly loaded campaign + list.
+        $campaign = SmsRequest::query()
+            ->withoutGlobalScopes()
+            ->with(['company', 'recipientList'])
+            ->find($list->sms_request_id);
+
+        if ($campaign !== null) {
+            app(SmsRequestService::class)->recalculateEstimate($campaign);
+        }
     }
 
     /**

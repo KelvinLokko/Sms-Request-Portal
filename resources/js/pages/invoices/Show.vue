@@ -42,7 +42,7 @@ type Invoice = {
 
 const props = defineProps<{
     invoice: Invoice;
-    can: { pay: boolean };
+    can: { pay: boolean; download: boolean };
 }>();
 
 defineOptions({
@@ -53,25 +53,22 @@ defineOptions({
         ],
     },
 });
-
 </script>
 
 <template>
     <Head :title="invoice.number" />
 
-    <div class="mx-auto flex max-w-3xl flex-col gap-6 p-4">
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-4 sm:p-6 lg:p-8">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <Heading
                 :title="invoice.number"
                 :description="`${invoice.status_label} · ${invoice.campaign_reference ?? ''}`"
             />
-            <Button
-                v-if="invoice.pdf_url"
-                as-child
-                variant="outline"
-            >
-                <a :href="invoice.pdf_url">Download PDF</a>
-            </Button>
+            <div class="flex flex-wrap gap-2">
+                <Button v-if="can.download && invoice.pdf_url" as-child>
+                    <a :href="invoice.pdf_url">Download PDF</a>
+                </Button>
+            </div>
         </div>
 
         <section class="overflow-x-auto rounded-xl border">
@@ -90,7 +87,9 @@ defineOptions({
                         class="border-b last:border-0"
                     >
                         <td class="px-4 py-3">{{ item.description }}</td>
-                        <td class="px-4 py-3">{{ item.quantity.toLocaleString() }}</td>
+                        <td class="px-4 py-3">
+                            {{ item.quantity.toLocaleString() }}
+                        </td>
                         <td class="px-4 py-3">{{ item.amount }}</td>
                     </tr>
                 </tbody>
@@ -125,7 +124,8 @@ defineOptions({
                         <span>{{ payment.amount }}</span>
                     </div>
                     <div class="mt-1 text-muted-foreground">
-                        Ref {{ payment.momo_reference }} · {{ payment.payer_number }}
+                        Ref {{ payment.momo_reference }} ·
+                        {{ payment.payer_number }}
                     </div>
                     <p
                         v-if="payment.rejection_reason"
@@ -137,13 +137,11 @@ defineOptions({
             </ul>
         </section>
 
-        <section
-            v-if="can.pay"
-            class="space-y-4 rounded-xl border p-4"
-        >
+        <section v-if="can.pay" class="space-y-4 rounded-xl border p-4">
             <h2 class="text-sm font-medium">Submit Mobile Money payment</h2>
             <p class="text-sm text-muted-foreground">
-                Pay {{ invoice.total }} offline, then enter the MoMo reference here for finance to verify.
+                Pay {{ invoice.total }} offline, then enter the MoMo reference
+                here for finance to verify.
             </p>
             <Form
                 v-bind="InvoiceController.storePayment.form(invoice.id)"
@@ -186,7 +184,7 @@ defineOptions({
                     <InputError :message="errors.payer_number" />
                 </div>
                 <div class="space-y-2">
-                    <Label for="proof">Proof (optional)</Label>
+                    <Label for="proof">Proof of payment</Label>
                     <Input
                         id="proof"
                         name="proof"

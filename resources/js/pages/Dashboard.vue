@@ -4,8 +4,9 @@ import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { index as analyticsIndex } from '@/routes/admin/analytics';
-import { index as campaignsIndex } from '@/routes/campaigns';
+import { create as campaignsCreate, index as campaignsIndex, show as campaignsShow } from '@/routes/campaigns';
 import { dashboard } from '@/routes';
+import { index as invoicesIndex, show as invoicesShow } from '@/routes/invoices';
 import { index as senderIdsIndex } from '@/routes/sender-ids';
 
 type Summary = {
@@ -17,8 +18,49 @@ type Summary = {
     sms_volume: number;
 };
 
-defineProps<{
+type CompanyOverview = {
+    stats: {
+        drafts: number;
+        in_flight: number;
+        fulfilled: number;
+        open_invoices: number;
+        open_invoice_total: string;
+        approved_sender_ids: number;
+        pending_sender_ids: number;
+        sms_volume: number;
+    };
+    recent_campaigns: Array<{
+        id: number;
+        reference: string;
+        name: string | null;
+        status: string;
+        status_label: string;
+        sender_id: string | null;
+        billable_recipients: number | null;
+        quoted_cost: string | null;
+        estimated_cost: string | null;
+        created_at: string | null;
+    }>;
+    recent_invoices: Array<{
+        id: number;
+        number: string;
+        status: string;
+        status_label: string;
+        total: string;
+        campaign_reference: string | null;
+        issued_at: string | null;
+    }>;
+    sender_ids: Array<{
+        id: number;
+        value: string;
+        status: string;
+        status_label: string;
+    }>;
+};
+
+const props = defineProps<{
     summary: Summary | null;
+    companyOverview: CompanyOverview | null;
     isStaff: boolean;
 }>();
 
@@ -37,22 +79,52 @@ const page = usePage();
 const auth = computed(() => page.props.auth);
 const company = computed(() => auth.value.company);
 const companyApproved = computed(() => company.value?.status === 'approved');
+const stats = computed(() => props.companyOverview?.stats ?? null);
+
+function formatDate(value: string | null): string {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+}
 </script>
 
 <template>
     <Head title="Dashboard" />
 
     <div class="flex flex-col gap-8 p-4 sm:p-6">
-        <Heading
-            title="Dashboard"
-            :description="
-                isStaff
-                    ? 'Platform overview'
-                    : company
-                      ? `${company.name} — ${company.status_label}`
-                      : 'Welcome'
-            "
-        />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <Heading
+                title="Dashboard"
+                :description="
+                    isStaff
+                        ? 'Platform overview'
+                        : company
+                          ? `${company.name} — ${company.status_label}`
+                          : 'Welcome'
+                "
+            />
+
+            <div
+                v-if="!isStaff && companyApproved"
+                class="flex flex-wrap gap-2"
+            >
+                <Button as-child variant="outline">
+                    <Link :href="senderIdsIndex()">Sender IDs</Link>
+                </Button>
+                <Button as-child variant="outline">
+                    <Link :href="invoicesIndex()">Invoices</Link>
+                </Button>
+                <Button as-child>
+                    <Link :href="campaignsCreate()">New campaign</Link>
+                </Button>
+            </div>
+        </div>
 
         <div
             v-if="!isStaff && company && company.status !== 'approved'"
@@ -66,8 +138,12 @@ const companyApproved = computed(() => company.value?.status === 'approved');
                 You can register sender IDs while we review your company. Campaign
                 requests unlock once an admin approves your account.
             </p>
+            <Button as-child class="mt-4" variant="outline">
+                <Link :href="senderIdsIndex()">Manage sender IDs</Link>
+            </Button>
         </div>
 
+        <!-- Staff KPIs -->
         <div
             v-if="isStaff && summary"
             class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
@@ -122,46 +198,240 @@ const companyApproved = computed(() => company.value?.status === 'approved');
             </div>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-            <div
-                v-if="!isStaff"
-                class="surface-panel flex flex-col gap-3 p-5 transition-shadow hover:shadow-md"
-            >
-                <h2 class="font-semibold tracking-tight">Sender IDs</h2>
-                <p class="text-sm leading-relaxed text-muted-foreground">
-                    Register the alphanumeric names recipients will see. Each
-                    must be approved before use.
-                </p>
-                <Button as-child class="mt-auto w-fit">
-                    <Link :href="senderIdsIndex()">Manage sender IDs</Link>
-                </Button>
-            </div>
+        <div
+            v-if="isStaff"
+            class="surface-panel flex flex-col gap-3 p-5 transition-shadow hover:shadow-md"
+        >
+            <h2 class="font-semibold tracking-tight">Analytics</h2>
+            <p class="text-sm leading-relaxed text-muted-foreground">
+                Revenue, request volume, SMS volume, and turnaround trends.
+            </p>
+            <Button as-child class="mt-auto w-fit">
+                <Link :href="analyticsIndex()">Open analytics</Link>
+            </Button>
+        </div>
 
-            <div
-                v-if="!isStaff && companyApproved"
-                class="surface-panel flex flex-col gap-3 p-5 transition-shadow hover:shadow-md"
-            >
-                <h2 class="font-semibold tracking-tight">Campaigns</h2>
-                <p class="text-sm leading-relaxed text-muted-foreground">
-                    Submit SMS campaign requests, validate recipient lists, and
-                    get a quote before you pay.
+        <!-- Company KPIs -->
+        <div
+            v-if="!isStaff && stats"
+            class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
+            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    In progress
                 </p>
-                <Button as-child class="mt-auto w-fit">
-                    <Link :href="campaignsIndex()">View campaigns</Link>
-                </Button>
+                <p class="mt-2 text-2xl font-semibold tracking-tight">
+                    {{ stats.in_flight }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    {{ stats.drafts }} draft{{ stats.drafts === 1 ? '' : 's' }}
+                </p>
             </div>
-
-            <div
-                v-if="isStaff"
-                class="surface-panel flex flex-col gap-3 p-5 transition-shadow hover:shadow-md"
-            >
-                <h2 class="font-semibold tracking-tight">Analytics</h2>
-                <p class="text-sm leading-relaxed text-muted-foreground">
-                    Revenue, request volume, SMS volume, and turnaround trends.
+            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Fulfilled
                 </p>
-                <Button as-child class="mt-auto w-fit">
-                    <Link :href="analyticsIndex()">Open analytics</Link>
-                </Button>
+                <p class="mt-2 text-2xl font-semibold tracking-tight">
+                    {{ stats.fulfilled }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    {{ stats.sms_volume.toLocaleString() }} SMS billed
+                </p>
+            </div>
+            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Open invoices
+                </p>
+                <p class="mt-2 text-2xl font-semibold tracking-tight">
+                    {{ stats.open_invoices }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    {{ stats.open_invoice_total }} outstanding
+                </p>
+            </div>
+            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Sender IDs
+                </p>
+                <p class="mt-2 text-2xl font-semibold tracking-tight">
+                    {{ stats.approved_sender_ids }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    {{ stats.pending_sender_ids }} pending approval
+                </p>
+            </div>
+        </div>
+
+        <!-- Company recent activity -->
+        <div
+            v-if="!isStaff && companyOverview"
+            class="grid gap-4 xl:grid-cols-[1.4fr_1fr]"
+        >
+            <section class="surface-panel overflow-hidden">
+                <div class="flex items-center justify-between gap-3 border-b px-5 py-4">
+                    <h2 class="font-semibold tracking-tight">Recent campaigns</h2>
+                    <Link
+                        :href="campaignsIndex()"
+                        class="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                        View all
+                    </Link>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[28rem] text-left text-sm">
+                        <thead class="border-b bg-muted/40">
+                            <tr>
+                                <th class="px-5 py-3 font-medium">Reference</th>
+                                <th class="px-5 py-3 font-medium">Status</th>
+                                <th class="px-5 py-3 font-medium">Sender</th>
+                                <th class="px-5 py-3 font-medium">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="row in companyOverview.recent_campaigns"
+                                :key="row.id"
+                                class="border-b last:border-0"
+                            >
+                                <td class="px-5 py-3">
+                                    <Link
+                                        :href="campaignsShow(row.id)"
+                                        class="font-medium underline-offset-4 hover:underline"
+                                    >
+                                        {{ row.reference }}
+                                    </Link>
+                                    <p
+                                        v-if="row.name"
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        {{ row.name }}
+                                    </p>
+                                </td>
+                                <td class="px-5 py-3">{{ row.status_label }}</td>
+                                <td class="px-5 py-3 font-mono text-xs">
+                                    {{ row.sender_id ?? '—' }}
+                                </td>
+                                <td class="px-5 py-3">
+                                    {{
+                                        row.quoted_cost ??
+                                        row.estimated_cost ??
+                                        '—'
+                                    }}
+                                </td>
+                            </tr>
+                            <tr
+                                v-if="
+                                    companyOverview.recent_campaigns.length === 0
+                                "
+                            >
+                                <td
+                                    colspan="4"
+                                    class="px-5 py-10 text-center text-muted-foreground"
+                                >
+                                    No campaigns yet.
+                                    <Link
+                                        v-if="companyApproved"
+                                        :href="campaignsCreate()"
+                                        class="ml-1 font-medium text-primary underline-offset-4 hover:underline"
+                                    >
+                                        Create one
+                                    </Link>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="grid gap-4">
+                <section class="surface-panel overflow-hidden">
+                    <div class="flex items-center justify-between gap-3 border-b px-5 py-4">
+                        <h2 class="font-semibold tracking-tight">Invoices</h2>
+                        <Link
+                            :href="invoicesIndex()"
+                            class="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                            View all
+                        </Link>
+                    </div>
+                    <ul class="divide-y">
+                        <li
+                            v-for="invoice in companyOverview.recent_invoices"
+                            :key="invoice.id"
+                            class="flex items-start justify-between gap-3 px-5 py-3"
+                        >
+                            <div class="min-w-0">
+                                <Link
+                                    :href="invoicesShow(invoice.id)"
+                                    class="font-medium underline-offset-4 hover:underline"
+                                >
+                                    {{ invoice.number }}
+                                </Link>
+                                <p class="truncate text-xs text-muted-foreground">
+                                    {{
+                                        invoice.campaign_reference ??
+                                        'Campaign invoice'
+                                    }}
+                                    · {{ formatDate(invoice.issued_at) }}
+                                </p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="text-sm font-medium">
+                                    {{ invoice.total }}
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    {{ invoice.status_label }}
+                                </p>
+                            </div>
+                        </li>
+                        <li
+                            v-if="
+                                companyOverview.recent_invoices.length === 0
+                            "
+                            class="px-5 py-8 text-center text-sm text-muted-foreground"
+                        >
+                            No invoices yet.
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="surface-panel overflow-hidden">
+                    <div class="flex items-center justify-between gap-3 border-b px-5 py-4">
+                        <h2 class="font-semibold tracking-tight">Sender IDs</h2>
+                        <Link
+                            :href="senderIdsIndex()"
+                            class="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                            Manage
+                        </Link>
+                    </div>
+                    <ul class="divide-y">
+                        <li
+                            v-for="sender in companyOverview.sender_ids"
+                            :key="sender.id"
+                            class="flex items-center justify-between gap-3 px-5 py-3"
+                        >
+                            <span class="font-mono text-sm font-medium">
+                                {{ sender.value }}
+                            </span>
+                            <span class="text-xs text-muted-foreground">
+                                {{ sender.status_label }}
+                            </span>
+                        </li>
+                        <li
+                            v-if="companyOverview.sender_ids.length === 0"
+                            class="px-5 py-8 text-center text-sm text-muted-foreground"
+                        >
+                            No sender IDs yet.
+                            <Link
+                                :href="senderIdsIndex()"
+                                class="ml-1 font-medium text-primary underline-offset-4 hover:underline"
+                            >
+                                Register one
+                            </Link>
+                        </li>
+                    </ul>
+                </section>
             </div>
         </div>
     </div>

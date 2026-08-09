@@ -116,13 +116,14 @@ it('rejects invalid sender id characters', function () {
         ->assertSessionHasErrors('value');
 });
 
-it('resets an approved sender id to pending when edited', function () {
+it('allows editing a pending sender id', function () {
     [$user, $company] = $this->createApprovedCompanyOwner();
 
-    $senderId = SenderId::factory()->approved()->create([
+    $senderId = SenderId::factory()->create([
         'company_id' => $company->id,
         'requested_by' => $user->id,
         'value' => 'OldName',
+        'status' => SenderIdStatus::Pending,
     ]);
 
     $this->actingAs($user)
@@ -133,6 +134,46 @@ it('resets an approved sender id to pending when edited', function () {
 
     expect($senderId->fresh()->status)->toBe(SenderIdStatus::Pending)
         ->and($senderId->fresh()->value)->toBe('NewName');
+});
+
+it('forbids editing approved or rejected sender ids', function () {
+    [$user, $company] = $this->createApprovedCompanyOwner();
+
+    $approved = SenderId::factory()->approved()->create([
+        'company_id' => $company->id,
+        'requested_by' => $user->id,
+        'value' => 'Approved',
+    ]);
+
+    $rejected = SenderId::factory()->create([
+        'company_id' => $company->id,
+        'requested_by' => $user->id,
+        'value' => 'Rejected',
+        'status' => SenderIdStatus::Rejected,
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('sender-ids.update', $approved), [
+            'value' => 'Changed',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->get(route('sender-ids.edit', $approved))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->delete(route('sender-ids.destroy', $approved))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->put(route('sender-ids.update', $rejected), [
+            'value' => 'Changed',
+        ])
+        ->assertForbidden();
+
+    expect($approved->fresh()->value)->toBe('Approved')
+        ->and($rejected->fresh()->value)->toBe('Rejected');
 });
 
 it('allows an admin to approve a pending company', function () {
@@ -162,6 +203,45 @@ it('allows an admin to approve a pending sender id', function () {
         ->assertRedirect();
 
     expect($senderId->fresh()->status)->toBe(SenderIdStatus::Approved);
+});
+
+it('lists sender ids across statuses with an optional status filter', function () {
+    $admin = $this->createPlatformAdmin();
+    [$owner, $company] = $this->createApprovedCompanyOwner();
+
+    $pending = SenderId::factory()->create([
+        'company_id' => $company->id,
+        'requested_by' => $owner->id,
+        'value' => 'PendingID',
+        'status' => SenderIdStatus::Pending,
+    ]);
+    $approved = SenderId::factory()->create([
+        'company_id' => $company->id,
+        'requested_by' => $owner->id,
+        'value' => 'ApprovedID',
+        'status' => SenderIdStatus::Approved,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.sender-ids.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/sender-ids/Index')
+            ->where('filters.status', null)
+            ->has('senderIds.data', 2)
+            ->has('statusOptions', 3));
+
+    $this->actingAs($admin)
+        ->get(route('admin.sender-ids.index', ['status' => 'approved']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.status', 'approved')
+            ->has('senderIds.data', 1)
+            ->where('senderIds.data.0.id', $approved->id)
+            ->where('senderIds.data.0.status', 'approved')
+            ->where('senderIds.data.0.reviewer', null));
+
+    expect($pending->fresh()->status)->toBe(SenderIdStatus::Pending);
 });
 
 it('resolves company-specific rates over the platform default', function () {

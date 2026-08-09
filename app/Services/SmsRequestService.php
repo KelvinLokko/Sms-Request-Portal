@@ -93,15 +93,28 @@ class SmsRequestService
 
     public function recalculateEstimate(SmsRequest $request): void
     {
+        $request->loadMissing(['company', 'recipientList']);
+
         $company = $request->company;
         $rate = CompanyRate::resolveFor($company);
         $rateValue = $rate !== null ? (string) $rate->rate_per_sms : '0.000000';
+
         $billable = (int) ($request->billable_recipients ?? 0);
+        $list = $request->recipientList;
+        if (
+            $list !== null
+            && $list->status === RecipientListStatus::Completed
+            && $list->billable_count > $billable
+        ) {
+            $billable = (int) $list->billable_count;
+        }
+
         $message = (string) ($request->message_body ?? '');
 
         $quote = CostEngine::quote($message, $billable, (string) $rateValue);
 
         $request->forceFill([
+            'billable_recipients' => $billable > 0 ? $billable : $request->billable_recipients,
             'pages' => $quote['pages'],
             'exceeds_621_warning' => $quote['exceeds_621_warning'],
             'rate_per_sms' => $rateValue,

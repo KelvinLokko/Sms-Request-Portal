@@ -5,6 +5,8 @@ import { computed, ref, watch } from 'vue';
 import FormStepper from '@/components/FormStepper.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
+import SmsPhonePreview from '@/components/SmsPhonePreview.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,6 +85,13 @@ const campaignTypeLabel = computed(() =>
     campaignType.value === 'personalised_bulk' ? 'Personalised bulk' : 'Bulk',
 );
 
+const senderIdOptions = computed(() =>
+    props.senderIds.map((sender) => ({
+        value: String(sender.id),
+        label: sender.value,
+    })),
+);
+
 const selectedSenderName = computed(
     () =>
         props.senderIds.find(
@@ -158,7 +167,7 @@ function onEnter(event: KeyboardEvent): void {
 <template>
     <Head title="New campaign" />
 
-    <div class="mx-auto flex max-w-2xl flex-col gap-6 p-4 sm:p-6">
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <Heading
             title="New campaign request"
             description="Four short steps: campaign type, recipients, message, then timing and review."
@@ -203,7 +212,7 @@ function onEnter(event: KeyboardEvent): void {
                     </h2>
 
                     <div class="grid gap-2">
-                        <Label for="name">Internal name (optional)</Label>
+                        <Label for="name">Campaign name</Label>
                         <Input
                             id="name"
                             name="name"
@@ -347,82 +356,93 @@ function onEnter(event: KeyboardEvent): void {
                         Sender and message
                     </h2>
 
-                    <div class="grid gap-2">
-                        <Label for="sender_id_id">Sender ID</Label>
-                        <select
-                            id="sender_id_id"
-                            name="sender_id_id"
-                            v-model="senderIdId"
-                            class="h-9 rounded-md border bg-background px-3 text-sm"
-                        >
-                            <option value="">Select approved sender ID</option>
-                            <option
-                                v-for="sender in senderIds"
-                                :key="sender.id"
-                                :value="String(sender.id)"
-                            >
-                                {{ sender.value }}
-                            </option>
-                        </select>
-                        <InputError :message="errors.sender_id_id" />
-                        <p
-                            v-if="senderIds.length === 0"
-                            class="text-xs text-muted-foreground"
-                        >
-                            No approved sender IDs yet — register one first.
-                        </p>
-                    </div>
+                    <div
+                        class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,18rem)] lg:items-start"
+                    >
+                        <div class="space-y-6">
+                            <div class="grid gap-2">
+                                <Label for="sender_id_id">Sender ID</Label>
+                                <SearchableSelect
+                                    id="sender_id_id"
+                                    name="sender_id_id"
+                                    v-model="senderIdId"
+                                    :options="senderIdOptions"
+                                    placeholder="Select approved sender ID"
+                                    search-placeholder="Search sender IDs…"
+                                    empty-text="No matching sender ID."
+                                    :disabled="senderIds.length === 0"
+                                />
+                                <InputError :message="errors.sender_id_id" />
+                                <p
+                                    v-if="senderIds.length === 0"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    No approved sender IDs yet — register one
+                                    first.
+                                </p>
+                            </div>
 
-                    <div class="grid gap-2">
-                        <Label for="message_body">Message</Label>
-                        <textarea
-                            id="message_body"
-                            name="message_body"
-                            v-model="messageBody"
-                            rows="6"
-                            class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                            :maxlength="maxMessageLength"
-                            :required="isActive('message')"
-                            :placeholder="
-                                campaignType === 'personalised_bulk'
-                                    ? 'Hello [Name], your code is [CODE].'
-                                    : 'Write the SMS every recipient will get.'
-                            "
-                        />
-                        <div
-                            class="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"
-                        >
-                            <span>{{ remaining }} characters left</span>
-                            <span v-if="estimateResult">
-                                {{ estimateResult.character_count }} chars ·
-                                {{ estimateResult.pages }}
-                                {{
-                                    estimateResult.pages === 1
-                                        ? 'page'
-                                        : 'pages'
-                                }}
-                            </span>
+                            <div class="grid gap-2">
+                                <Label for="message_body">Message</Label>
+                                <textarea
+                                    id="message_body"
+                                    name="message_body"
+                                    v-model="messageBody"
+                                    rows="6"
+                                    class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                    :maxlength="maxMessageLength"
+                                    :required="isActive('message')"
+                                    :placeholder="
+                                        campaignType === 'personalised_bulk'
+                                            ? 'Hello [Name], your code is [CODE].'
+                                            : 'Write the SMS every recipient will get.'
+                                    "
+                                />
+                                <div
+                                    class="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"
+                                >
+                                    <span>{{ remaining }} characters left</span>
+                                    <span v-if="estimateResult">
+                                        {{ estimateResult.character_count }}
+                                        chars · {{ estimateResult.pages }}
+                                        {{
+                                            estimateResult.pages === 1
+                                                ? 'page'
+                                                : 'pages'
+                                        }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="
+                                        campaignType === 'personalised_bulk' &&
+                                        !messageBody.includes('[')
+                                    "
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    Tip: add placeholders like
+                                    <code class="rounded bg-muted px-1"
+                                        >[Name]</code
+                                    >
+                                    matching columns in your CSV.
+                                </p>
+                                <p
+                                    v-if="estimateResult?.exceeds_621_warning"
+                                    class="text-sm text-amber-700 dark:text-amber-300"
+                                >
+                                    Messages over {{ warnThreshold }} characters
+                                    sit in a range where gateway behaviour can
+                                    disagree — consider shortening.
+                                </p>
+                                <InputError :message="errors.message_body" />
+                            </div>
                         </div>
-                        <p
-                            v-if="
-                                campaignType === 'personalised_bulk' &&
-                                !messageBody.includes('[')
-                            "
-                            class="text-xs text-muted-foreground"
-                        >
-                            Tip: add placeholders like
-                            <code class="rounded bg-muted px-1">[Name]</code>
-                            matching columns in your CSV.
-                        </p>
-                        <p
-                            v-if="estimateResult?.exceeds_621_warning"
-                            class="text-sm text-amber-700 dark:text-amber-300"
-                        >
-                            Messages over {{ warnThreshold }} characters sit in
-                            a range where gateway behaviour can disagree —
-                            consider shortening.
-                        </p>
-                        <InputError :message="errors.message_body" />
+
+                        <SmsPhonePreview
+                            class="lg:sticky lg:top-6"
+                            :sender="selectedSenderName"
+                            :message="messageBody"
+                            :max-length="maxMessageLength"
+                        />
                     </div>
                 </section>
 
@@ -464,10 +484,6 @@ function onEnter(event: KeyboardEvent): void {
                                 type="datetime-local"
                             />
                             <InputError :message="errors.hard_deadline_at" />
-                            <p class="text-xs text-muted-foreground">
-                                Optional. Must be on or after the requested send
-                                time.
-                            </p>
                         </div>
                     </div>
 

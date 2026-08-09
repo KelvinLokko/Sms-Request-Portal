@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\RecipientListStatus;
 use App\Enums\SenderIdStatus;
+use App\Enums\SmsRequestStatus;
 use App\Http\Requests\Campaigns\EstimateCostRequest;
 use App\Http\Requests\Campaigns\StoreSmsRequestRequest;
 use App\Http\Requests\Campaigns\UpdateSmsRequestRequest;
@@ -14,6 +15,7 @@ use App\Models\RecipientList;
 use App\Models\SenderId;
 use App\Models\SmsRequest;
 use App\Services\SmsRequestService;
+use App\Support\ListFilters;
 use App\Support\Money;
 use App\Support\PrivateStorage;
 use App\Support\Sms\CostEngine;
@@ -33,14 +35,50 @@ class CampaignController extends Controller
     {
         $this->authorize('viewAny', SmsRequest::class);
 
+        $filters = ListFilters::fromRequest($request);
+        $status = $filters['status'];
+
         $campaigns = SmsRequest::query()
             ->with(['senderId:id,value,status'])
+            ->when(
+                $status !== null && SmsRequestStatus::tryFrom($status),
+                fn ($query) => $query->where('status', $status),
+            )
+            ->tap(fn ($query) => ListFilters::applyDateRange(
+                $query,
+                $filters['from'],
+                $filters['to'],
+            ))
+            ->when(
+                $filters['q'] !== null,
+                function ($query) use ($filters): void {
+                    $term = '%'.$filters['q'].'%';
+
+                    $query->where(function ($inner) use ($term): void {
+                        $inner->where('reference', 'like', $term)
+                            ->orWhere('name', 'like', $term)
+                            ->orWhereHas('senderId', fn ($sender) => $sender->where('value', 'like', $term));
+                    });
+                },
+            )
             ->latest()
             ->paginate(15)
+            ->withQueryString()
             ->through(fn (SmsRequest $campaign) => $this->summary($campaign));
 
         return Inertia::render('campaigns/Index', [
             'campaigns' => $campaigns,
+            'filters' => [
+                ...$filters,
+                'status' => $status !== null && SmsRequestStatus::tryFrom($status) ? $status : null,
+            ],
+            'statusOptions' => collect(SmsRequestStatus::cases())
+                ->map(fn (SmsRequestStatus $case) => [
+                    'value' => $case->value,
+                    'label' => $case->label(),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -88,9 +126,6 @@ class CampaignController extends Controller
 
         return Inertia::render('campaigns/Show', [
             'campaign' => $this->detail($campaign),
-            'senderIds' => $campaign->status->isEditable()
-                ? $this->approvedSenderIds(request())
-                : [],
             'maxMessageLength' => SegmentCounter::MAX_MESSAGE_LENGTH,
             'warnThreshold' => SegmentCounter::WARN_THRESHOLD,
             'can' => [
@@ -102,11 +137,21 @@ class CampaignController extends Controller
         ]);
     }
 
-    public function edit(SmsRequest $campaign): RedirectResponse
+    public function edit(SmsRequest $campaign): Response
     {
         $this->authorize('update', $campaign);
 
-        return redirect()->route('campaigns.show', $campaign);
+        $campaign->load(['senderId', 'recipientList']);
+
+        return Inertia::render('campaigns/Edit', [
+            'campaign' => $this->detail($campaign),
+            'senderIds' => $this->approvedSenderIds(request()),
+            'maxMessageLength' => SegmentCounter::MAX_MESSAGE_LENGTH,
+            'warnThreshold' => SegmentCounter::WARN_THRESHOLD,
+            'can' => [
+                'upload' => request()->user()?->can('uploadRecipients', $campaign) ?? false,
+            ],
+        ]);
     }
 
     public function update(
@@ -151,8 +196,11 @@ class CampaignController extends Controller
             $request->validated('phone_column'),
         );
 
+        // Uploading happens from the edit screen, so keep the user in that context.
+        $canEdit = $request->user()?->can('update', $campaign) ?? false;
+
         return redirect()
-            ->route('campaigns.show', $campaign)
+            ->route($canEdit ? 'campaigns.edit' : 'campaigns.show', $campaign)
             ->with('success', 'Recipient list uploaded. Validation is running.');
     }
 

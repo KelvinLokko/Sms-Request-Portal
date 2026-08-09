@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\PaymentProvider;
+use App\Enums\InvoiceStatus;
 use App\Http\Requests\Payments\StorePaymentRequest;
 use App\Models\Invoice;
+use App\Services\InvoicePdfService;
+use App\Support\ListFilters;
 use App\Support\Money;
 use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
@@ -21,14 +24,53 @@ class InvoiceController extends Controller
     {
         $this->authorize('viewAny', Invoice::class);
 
+        $filters = ListFilters::fromRequest($request);
+        $status = $filters['status'];
+
         $invoices = Invoice::query()
             ->with(['smsRequest:id,reference,name'])
+            ->when(
+                $status !== null && InvoiceStatus::tryFrom($status),
+                fn ($query) => $query->where('status', $status),
+            )
+            ->tap(fn ($query) => ListFilters::applyDateRange(
+                $query,
+                $filters['from'],
+                $filters['to'],
+                'issued_at',
+            ))
+            ->when(
+                $filters['q'] !== null,
+                function ($query) use ($filters): void {
+                    $term = '%'.$filters['q'].'%';
+
+                    $query->where(function ($inner) use ($term): void {
+                        $inner->where('number', 'like', $term)
+                            ->orWhereHas('smsRequest', function ($campaign) use ($term): void {
+                                $campaign->where('reference', 'like', $term)
+                                    ->orWhere('name', 'like', $term);
+                            });
+                    });
+                },
+            )
             ->latest('issued_at')
             ->paginate(15)
+            ->withQueryString()
             ->through(fn (Invoice $invoice) => $this->summary($invoice));
 
         return Inertia::render('invoices/Index', [
             'invoices' => $invoices,
+            'filters' => [
+                ...$filters,
+                'status' => $status !== null && InvoiceStatus::tryFrom($status) ? $status : null,
+            ],
+            'statusOptions' => collect(InvoiceStatus::cases())
+                ->map(fn (InvoiceStatus $case) => [
+                    'value' => $case->value,
+                    'label' => $case->label(),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -66,29 +108,27 @@ class InvoiceController extends Controller
                     'rejection_reason' => $payment->rejection_reason,
                     'created_at' => $payment->created_at?->toIso8601String(),
                 ])->all(),
-                'pdf_url' => $invoice->hasPdf()
-                    ? URL::temporarySignedRoute(
-                        'invoices.pdf',
-                        now()->addMinutes(30),
-                        ['invoice' => $invoice->id],
-                    )
-                    : null,
+                'pdf_url' => $this->pdfUrl($invoice),
             ],
             'can' => [
                 'pay' => request()->user()?->can('pay', $invoice) ?? false,
+                'download' => request()->user()?->can('download', $invoice) ?? false,
             ],
         ]);
     }
 
-    public function downloadPdf(Invoice $invoice): StreamedResponse
+    public function downloadPdf(Invoice $invoice, InvoicePdfService $pdfs): StreamedResponse
     {
         $this->authorize('download', $invoice);
-        abort_unless($invoice->hasPdf(), 404);
-        abort_unless(PrivateStorage::disk()->exists($invoice->pdf_path), 404);
+
+        $path = $pdfs->ensure($invoice);
+
+        abort_unless(PrivateStorage::disk()->exists($path), 404);
 
         return PrivateStorage::disk()->download(
-            $invoice->pdf_path,
+            $path,
             $invoice->number.'.pdf',
+            ['Content-Type' => 'application/pdf'],
         );
     }
 
@@ -135,6 +175,16 @@ class InvoiceController extends Controller
             'campaign_reference' => $invoice->smsRequest?->reference,
             'campaign_name' => $invoice->smsRequest?->name,
             'issued_at' => $invoice->issued_at->toIso8601String(),
+            'pdf_url' => $this->pdfUrl($invoice),
         ];
+    }
+
+    private function pdfUrl(Invoice $invoice): string
+    {
+        return URL::temporarySignedRoute(
+            'invoices.pdf',
+            now()->addMinutes(30),
+            ['invoice' => $invoice->id],
+        );
     }
 }

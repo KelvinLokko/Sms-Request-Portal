@@ -160,6 +160,7 @@ it('requires a recipient list when creating a campaign', function () {
 
 it('validates a recipient csv and counts billable rows', function () {
     Storage::fake(config('filesystems.default'));
+    CompanyRate::factory()->create(['rate_per_sms' => '0.030000']);
     [$user, $company] = $this->createApprovedCompanyOwner();
 
     $campaign = SmsRequest::factory()->create([
@@ -194,6 +195,7 @@ it('validates a recipient csv and counts billable rows', function () {
         ->and($list->invalid_count)->toBe(1)
         ->and($list->billable_count)->toBe(2)
         ->and($campaign->billable_recipients)->toBe(2)
+        ->and($campaign->estimated_cost_pesewas)->toBe(6)
         ->and($list->hasRejectedExport())->toBeTrue();
 
     expect(SmsRecipient::query()->where('status', RecipientRowStatus::Valid)->count())->toBe(2);

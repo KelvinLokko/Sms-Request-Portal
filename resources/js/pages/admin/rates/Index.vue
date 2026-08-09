@@ -2,6 +2,8 @@
 import { Form, Head } from '@inertiajs/vue3';
 import CompanyRateController from '@/actions/App/Http/Controllers/Admin/CompanyRateController';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +20,7 @@ type RateRow = {
 };
 
 defineProps<{
-    rates: { data: RateRow[] };
+    rates: Paginated<RateRow>;
     companies: { id: number; name: string }[];
 }>();
 
@@ -27,7 +29,6 @@ defineOptions({
         breadcrumbs: [{ title: 'SMS rates', href: index() }],
     },
 });
-
 </script>
 
 <template>
@@ -46,7 +47,9 @@ defineOptions({
         >
             <h2 class="font-medium">Add rate</h2>
             <div class="grid gap-2">
-                <Label for="company_id">Company (blank = platform default)</Label>
+                <Label for="company_id"
+                    >Company (blank = platform default)</Label
+                >
                 <select
                     id="company_id"
                     name="company_id"
@@ -114,11 +117,15 @@ defineOptions({
                                     : rate.company?.name
                             }}
                         </td>
-                        <td class="px-4 py-3 font-mono">{{ rate.rate_per_sms }}</td>
+                        <td class="px-4 py-3 font-mono">
+                            {{ rate.rate_per_sms }}
+                        </td>
                         <td class="px-4 py-3">{{ rate.effective_from }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="rates" />
     </div>
 </template>

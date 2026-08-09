@@ -21,6 +21,7 @@ class TaxRateController extends Controller
             ->orderByDesc('effective_from')
             ->orderBy('name')
             ->paginate(20)
+            ->withQueryString()
             ->through(fn (TaxRate $taxRate) => [
                 'id' => $taxRate->id,
                 'name' => $taxRate->name,

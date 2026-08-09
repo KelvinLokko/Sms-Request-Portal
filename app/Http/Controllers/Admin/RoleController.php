@@ -25,8 +25,9 @@ class RoleController extends Controller
             ->with('permissions:id,name')
             ->withCount('users')
             ->orderBy('name')
-            ->get()
-            ->map(function (Role $role) {
+            ->paginate(20)
+            ->withQueryString()
+            ->through(function (Role $role) {
                 $permissionNames = $role->permissions->pluck('name')->values()->all();
 
                 return [

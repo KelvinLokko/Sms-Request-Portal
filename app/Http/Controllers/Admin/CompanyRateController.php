@@ -22,6 +22,7 @@ class CompanyRateController extends Controller
             ->latest('effective_from')
             ->latest('id')
             ->paginate(20)
+            ->withQueryString()
             ->through(fn (CompanyRate $rate) => [
                 'id' => $rate->id,
                 'company' => $rate->company

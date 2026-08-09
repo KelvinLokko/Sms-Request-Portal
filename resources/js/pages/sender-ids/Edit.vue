@@ -32,14 +32,10 @@ defineOptions({
 <template>
     <Head title="Edit sender ID" />
 
-    <div class="mx-auto flex max-w-lg flex-col gap-6 p-4">
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <Heading
             title="Edit sender ID"
-            :description="
-                senderId.status === 'approved'
-                    ? 'Saving changes will reset this sender ID to pending review.'
-                    : 'Update the sender ID and resubmit for review if needed.'
-            "
+            description="Update this pending sender ID before it is reviewed."
         />
 
         <Form

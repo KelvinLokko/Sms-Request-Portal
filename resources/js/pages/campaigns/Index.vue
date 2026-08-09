@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
+import ListFilterBar from '@/components/ListFilterBar.vue';
+import type { ListFilterValues } from '@/components/ListFilterBar.vue';
 import { Button } from '@/components/ui/button';
 import { create, index, show } from '@/routes/campaigns';
 
@@ -18,7 +22,14 @@ type CampaignRow = {
 };
 
 defineProps<{
-    campaigns: { data: CampaignRow[] };
+    campaigns: Paginated<CampaignRow>;
+    filters: {
+        status: string | null;
+        from: string | null;
+        to: string | null;
+        q: string | null;
+    };
+    statusOptions: { value: string; label: string }[];
 }>();
 
 defineOptions({
@@ -27,6 +38,22 @@ defineOptions({
     },
 });
 
+function applyFilters(values: ListFilterValues) {
+    router.get(
+        index.url(),
+        {
+            ...(values.status ? { status: values.status } : {}),
+            ...(values.from ? { from: values.from } : {}),
+            ...(values.to ? { to: values.to } : {}),
+            ...(values.q ? { q: values.q } : {}),
+        },
+        { preserveState: true, preserveScroll: true },
+    );
+}
+
+function resetFilters() {
+    router.get(index.url(), {}, { preserveState: true, preserveScroll: true });
+}
 </script>
 
 <template>
@@ -42,6 +69,18 @@ defineOptions({
                 <Link :href="create()">New campaign</Link>
             </Button>
         </div>
+
+        <ListFilterBar
+            :status="filters.status"
+            :from="filters.from"
+            :to="filters.to"
+            :q="filters.q"
+            :status-options="statusOptions"
+            show-search
+            search-placeholder="Search reference, name, or sender"
+            @apply="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="overflow-x-auto rounded-xl border">
             <table class="w-full min-w-[40rem] text-left text-sm">
@@ -96,5 +135,7 @@ defineOptions({
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="campaigns" />
     </div>
 </template>

@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\RequestCampaignChangesRequest;
 use App\Models\SmsRequest;
 use App\Services\CampaignReviewService;
 use App\Services\InvoiceService;
+use App\Support\ListFilters;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,8 @@ class CampaignReviewController extends Controller
     {
         $this->authorize('viewAny', SmsRequest::class);
 
-        $status = $request->string('status')->toString();
+        $filters = ListFilters::fromRequest($request);
+        $status = $filters['status'] ?? '';
         $allowed = [
             SmsRequestStatus::Submitted->value,
             SmsRequestStatus::UnderReview->value,
@@ -33,6 +35,24 @@ class CampaignReviewController extends Controller
                 in_array($status, $allowed, true),
                 fn ($q) => $q->where('status', $status),
                 fn ($q) => $q->whereIn('status', $allowed),
+            )
+            ->tap(fn ($query) => ListFilters::applyDateRange(
+                $query,
+                $filters['from'],
+                $filters['to'],
+                'submitted_at',
+            ))
+            ->when(
+                $filters['q'] !== null,
+                function ($query) use ($filters): void {
+                    $term = '%'.$filters['q'].'%';
+
+                    $query->where(function ($inner) use ($term): void {
+                        $inner->where('reference', 'like', $term)
+                            ->orWhere('name', 'like', $term)
+                            ->orWhereHas('company', fn ($company) => $company->where('name', 'like', $term));
+                    });
+                },
             )
             ->latest('submitted_at')
             ->paginate(20)
@@ -60,7 +80,18 @@ class CampaignReviewController extends Controller
         return Inertia::render('admin/campaigns/Index', [
             'campaigns' => $campaigns,
             'filters' => [
-                'status' => in_array($status, $allowed, true) ? $status : 'all',
+                ...$filters,
+                'status' => in_array($status, $allowed, true) ? $status : null,
+            ],
+            'statusOptions' => [
+                [
+                    'value' => SmsRequestStatus::Submitted->value,
+                    'label' => SmsRequestStatus::Submitted->label(),
+                ],
+                [
+                    'value' => SmsRequestStatus::UnderReview->value,
+                    'label' => SmsRequestStatus::UnderReview->label(),
+                ],
             ],
         ]);
     }

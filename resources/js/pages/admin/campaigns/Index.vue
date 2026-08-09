@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
 import CampaignReviewController from '@/actions/App/Http/Controllers/Admin/CampaignReviewController';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
+import ListFilterBar from '@/components/ListFilterBar.vue';
+import type { ListFilterValues } from '@/components/ListFilterBar.vue';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/admin/campaigns';
 
@@ -21,9 +24,15 @@ type Row = {
     submitted_at: string | null;
 };
 
-const props = defineProps<{
-    campaigns: { data: Row[] };
-    filters: { status: string };
+defineProps<{
+    campaigns: Paginated<Row>;
+    filters: {
+        status: string | null;
+        from: string | null;
+        to: string | null;
+        q: string | null;
+    };
+    statusOptions: { value: string; label: string }[];
 }>();
 
 defineOptions({
@@ -32,14 +41,32 @@ defineOptions({
     },
 });
 
-const statusFilter = ref(props.filters.status);
-
-function applyFilter() {
+function applyFilters(values: ListFilterValues) {
     router.get(
         index.url(),
-        { status: statusFilter.value === 'all' ? undefined : statusFilter.value },
-        { preserveState: true },
+        {
+            ...(values.status ? { status: values.status } : {}),
+            ...(values.from ? { from: values.from } : {}),
+            ...(values.to ? { to: values.to } : {}),
+            ...(values.q ? { q: values.q } : {}),
+        },
+        { preserveState: true, preserveScroll: true },
     );
+}
+
+function resetFilters() {
+    router.get(index.url(), {}, { preserveState: true, preserveScroll: true });
+}
+
+function formatDate(value: string | null): string {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
 }
 </script>
 
@@ -52,31 +79,33 @@ function applyFilter() {
             description="Review submitted campaigns, request changes, reject blocked content, or issue an invoice."
         />
 
-        <div class="flex flex-wrap items-end gap-3">
-            <label class="flex flex-col gap-1 text-sm">
-                <span class="text-muted-foreground">Status</span>
-                <select
-                    v-model="statusFilter"
-                    class="rounded-md border bg-background px-3 py-2"
-                    @change="applyFilter"
-                >
-                    <option value="all">Submitted + under review</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="under_review">Under review</option>
-                </select>
-            </label>
-        </div>
+        <ListFilterBar
+            :status="filters.status"
+            :from="filters.from"
+            :to="filters.to"
+            :q="filters.q"
+            :status-options="statusOptions"
+            show-search
+            search-placeholder="Search reference, name, or company"
+            from-label="Submitted from"
+            to-label="Submitted to"
+            @apply="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="overflow-x-auto rounded-xl border">
-            <table class="w-full min-w-[48rem] text-left text-sm">
+            <table class="w-full min-w-[56rem] text-left text-sm">
                 <thead class="border-b bg-muted/40">
                     <tr>
                         <th class="px-4 py-3 font-medium">Reference</th>
                         <th class="px-4 py-3 font-medium">Company</th>
                         <th class="px-4 py-3 font-medium">Status</th>
                         <th class="px-4 py-3 font-medium">Quote</th>
+                        <th class="px-4 py-3 font-medium">Submitted</th>
                         <th class="px-4 py-3 font-medium">Flags</th>
-                        <th class="px-4 py-3 font-medium" />
+                        <th class="w-24 px-4 py-3 font-medium">
+                            <span class="sr-only">Actions</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -86,16 +115,29 @@ function applyFilter() {
                         class="border-b last:border-0"
                     >
                         <td class="px-4 py-3">
-                            <div class="font-mono text-xs">{{ row.reference }}</div>
-                            <div class="text-muted-foreground">{{ row.name }}</div>
+                            <div class="font-mono text-xs">
+                                {{ row.reference }}
+                            </div>
+                            <div class="text-muted-foreground">
+                                {{ row.name }}
+                            </div>
                         </td>
                         <td class="px-4 py-3">{{ row.company.name }}</td>
                         <td class="px-4 py-3">{{ row.status_label }}</td>
                         <td class="px-4 py-3">
                             <div>{{ row.quoted_cost ?? '—' }}</div>
                             <div class="text-xs text-muted-foreground">
-                                {{ row.billable_recipients?.toLocaleString() ?? '—' }} recipients
+                                {{
+                                    row.billable_recipients?.toLocaleString() ??
+                                    '—'
+                                }}
+                                recipients
                             </div>
+                        </td>
+                        <td
+                            class="px-4 py-3 whitespace-nowrap text-muted-foreground"
+                        >
+                            {{ formatDate(row.submitted_at) }}
                         </td>
                         <td class="px-4 py-3 text-xs">
                             <span
@@ -111,7 +153,10 @@ function applyFilter() {
                                 >621 chars
                             </span>
                             <span
-                                v-if="!row.requires_manual_cost_review && !row.exceeds_621_warning"
+                                v-if="
+                                    !row.requires_manual_cost_review &&
+                                    !row.exceeds_621_warning
+                                "
                                 class="text-muted-foreground"
                             >
                                 —
@@ -119,7 +164,13 @@ function applyFilter() {
                         </td>
                         <td class="px-4 py-3 text-right">
                             <Button as-child size="sm" variant="outline">
-                                <Link :href="CampaignReviewController.show.url(row.id)">
+                                <Link
+                                    :href="
+                                        CampaignReviewController.show.url(
+                                            row.id,
+                                        )
+                                    "
+                                >
                                     Open
                                 </Link>
                             </Button>
@@ -127,14 +178,16 @@ function applyFilter() {
                     </tr>
                     <tr v-if="campaigns.data.length === 0">
                         <td
-                            colspan="6"
+                            colspan="7"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
-                            No campaigns in the review queue.
+                            No campaigns match the current filters.
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="campaigns" />
     </div>
 </template>

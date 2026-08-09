@@ -7,6 +7,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { confirmDialog } from '@/composables/useConfirmDialog';
 import { index } from '@/routes/admin/campaigns';
 
 type Campaign = {
@@ -65,10 +66,19 @@ function startReview() {
     router.post(CampaignReviewController.startReview.url(props.campaign.id));
 }
 
-function issueInvoice() {
-    if (!confirm('Issue an immutable invoice for this campaign?')) {
+async function issueInvoice() {
+    const confirmed = await confirmDialog({
+        title: 'Issue invoice?',
+        description:
+            'This creates an immutable invoice for the campaign. This cannot be undone.',
+        confirmLabel: 'Issue invoice',
+        cancelLabel: 'Not yet',
+    });
+
+    if (!confirmed) {
         return;
     }
+
     router.post(CampaignReviewController.issueInvoice.url(props.campaign.id));
 }
 </script>
@@ -76,7 +86,7 @@ function issueInvoice() {
 <template>
     <Head :title="`Review ${campaign.reference}`" />
 
-    <div class="mx-auto flex max-w-3xl flex-col gap-6 p-4">
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-4 sm:p-6 lg:p-8">
         <Heading
             :title="campaign.reference"
             :description="`${campaign.status_label} · ${campaign.company.name}`"
@@ -86,33 +96,52 @@ function issueInvoice() {
             <Button v-if="can.start_review" @click="startReview">
                 Start review
             </Button>
-            <Button
-                v-if="can.issue_invoice"
-                @click="issueInvoice"
-            >
+            <Button v-if="can.issue_invoice" @click="issueInvoice">
                 Issue invoice
             </Button>
         </div>
 
         <section class="space-y-2 rounded-xl border p-4 text-sm">
-            <p><span class="text-muted-foreground">Sender ID:</span> {{ campaign.sender_id ?? '—' }}</p>
-            <p><span class="text-muted-foreground">Encoding:</span> {{ campaign.encoding }} · {{ campaign.pages }} page(s)</p>
-            <p><span class="text-muted-foreground">Quote:</span> {{ campaign.quoted_cost ?? '—' }} @ {{ campaign.rate_per_sms ?? '—' }}/SMS</p>
-            <p><span class="text-muted-foreground">Billable:</span> {{ campaign.billable_recipients?.toLocaleString() ?? '—' }}</p>
-            <p v-if="campaign.requires_manual_cost_review" class="text-amber-700 dark:text-amber-400">
+            <p>
+                <span class="text-muted-foreground">Sender ID:</span>
+                {{ campaign.sender_id ?? '—' }}
+            </p>
+            <p>
+                <span class="text-muted-foreground">Encoding:</span>
+                {{ campaign.encoding }} · {{ campaign.pages }} page(s)
+            </p>
+            <p>
+                <span class="text-muted-foreground">Quote:</span>
+                {{ campaign.quoted_cost ?? '—' }} @
+                {{ campaign.rate_per_sms ?? '—' }}/SMS
+            </p>
+            <p>
+                <span class="text-muted-foreground">Billable:</span>
+                {{ campaign.billable_recipients?.toLocaleString() ?? '—' }}
+            </p>
+            <p
+                v-if="campaign.requires_manual_cost_review"
+                class="text-amber-700 dark:text-amber-400"
+            >
                 Unicode campaign — verify cost manually before invoicing.
             </p>
-            <p v-if="campaign.exceeds_621_warning" class="text-amber-700 dark:text-amber-400">
+            <p
+                v-if="campaign.exceeds_621_warning"
+                class="text-amber-700 dark:text-amber-400"
+            >
                 Message exceeds 621 characters.
             </p>
             <p v-if="campaign.invoice_number">
-                <span class="text-muted-foreground">Invoice:</span> {{ campaign.invoice_number }}
+                <span class="text-muted-foreground">Invoice:</span>
+                {{ campaign.invoice_number }}
             </p>
         </section>
 
         <section class="space-y-2">
             <h2 class="text-sm font-medium">Message</h2>
-            <pre class="whitespace-pre-wrap rounded-xl border bg-muted/30 p-4 text-sm">{{ campaign.message_body }}</pre>
+            <pre
+                class="rounded-xl border bg-muted/30 p-4 text-sm whitespace-pre-wrap"
+                >{{ campaign.message_body }}</pre>
         </section>
 
         <section
@@ -121,7 +150,9 @@ function issueInvoice() {
         >
             <h2 class="text-sm font-medium">Request changes</h2>
             <Form
-                v-bind="CampaignReviewController.requestChanges.form(campaign.id)"
+                v-bind="
+                    CampaignReviewController.requestChanges.form(campaign.id)
+                "
                 class="space-y-3"
                 v-slot="{ errors, processing }"
             >
@@ -165,7 +196,11 @@ function issueInvoice() {
                     />
                     <InputError :message="errors.rejection_reason" />
                 </div>
-                <Button type="submit" variant="destructive" :disabled="processing">
+                <Button
+                    type="submit"
+                    variant="destructive"
+                    :disabled="processing"
+                >
                     <Spinner v-if="processing" />
                     Reject
                 </Button>

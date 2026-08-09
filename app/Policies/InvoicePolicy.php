@@ -26,7 +26,7 @@ class InvoicePolicy
 
     public function download(User $user, Invoice $invoice): bool
     {
-        return $this->view($user, $invoice) && $invoice->hasPdf();
+        return $this->view($user, $invoice);
     }
 
     public function pay(User $user, Invoice $invoice): bool

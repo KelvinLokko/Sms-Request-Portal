@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import RoleController from '@/actions/App/Http/Controllers/Admin/RoleController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import ListPagination from '@/components/ListPagination.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -15,8 +16,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { alertDialog, confirmDialog } from '@/composables/useConfirmDialog';
 import { index as rolesIndex } from '@/routes/admin/roles';
 import { index as usersIndex } from '@/routes/admin/users';
+import type { Paginated } from '@/types';
 
 type PermissionOption = {
     value: string;
@@ -41,7 +44,7 @@ type RoleRow = {
 };
 
 const props = defineProps<{
-    roles: RoleRow[];
+    roles: Paginated<RoleRow>;
     permissionCatalog: PermissionGroup[];
 }>();
 
@@ -61,11 +64,11 @@ const createPermissions = ref<string[]>(['admin.access']);
 const editPermissions = ref<string[]>([]);
 
 const editing = computed(
-    () => props.roles.find((role) => role.id === editId.value) ?? null,
+    () => props.roles.data.find((role) => role.id === editId.value) ?? null,
 );
 
 const viewing = computed(
-    () => props.roles.find((role) => role.id === viewId.value) ?? null,
+    () => props.roles.data.find((role) => role.id === viewId.value) ?? null,
 );
 
 watch(editing, (role) => {
@@ -100,6 +103,7 @@ function onEditSuccess() {
 
 function togglePermission(target: 'create' | 'edit', value: string) {
     const list = target === 'create' ? createPermissions : editPermissions;
+
     if (list.value.includes(value)) {
         list.value = list.value.filter((item) => item !== value);
     } else {
@@ -107,18 +111,37 @@ function togglePermission(target: 'create' | 'edit', value: string) {
     }
 }
 
-function destroyRole(role: RoleRow) {
+async function destroyRole(role: RoleRow) {
     if (role.is_system) {
-        alert('Built-in system roles cannot be deleted.');
+        await alertDialog({
+            title: 'Cannot delete system role',
+            description: 'Built-in system roles cannot be deleted.',
+        });
+
         return;
     }
+
     if (role.users_count > 0) {
-        alert('Remove all users from this role before deleting it.');
+        await alertDialog({
+            title: 'Role still in use',
+            description: 'Remove all users from this role before deleting it.',
+        });
+
         return;
     }
-    if (!confirm(`Delete role “${role.label}”? This cannot be undone.`)) {
+
+    const confirmed = await confirmDialog({
+        title: `Delete role “${role.label}”?`,
+        description: 'This cannot be undone.',
+        confirmLabel: 'Delete role',
+        cancelLabel: 'Keep role',
+        variant: 'destructive',
+    });
+
+    if (!confirmed) {
         return;
     }
+
     router.delete(RoleController.destroy.url(role.id));
 }
 </script>
@@ -201,14 +224,25 @@ function destroyRole(role: RoleRow) {
                                     <input
                                         type="checkbox"
                                         class="mt-1"
-                                        :checked="createPermissions.includes(permission.value)"
-                                        @change="togglePermission('create', permission.value)"
+                                        :checked="
+                                            createPermissions.includes(
+                                                permission.value,
+                                            )
+                                        "
+                                        @change="
+                                            togglePermission(
+                                                'create',
+                                                permission.value,
+                                            )
+                                        "
                                     />
                                     <span>
                                         <span class="block text-sm font-medium">
                                             {{ permission.label }}
                                         </span>
-                                        <span class="block text-xs text-muted-foreground">
+                                        <span
+                                            class="block text-xs text-muted-foreground"
+                                        >
                                             {{ permission.description }}
                                         </span>
                                     </span>
@@ -234,7 +268,10 @@ function destroyRole(role: RoleRow) {
             </DialogContent>
         </Dialog>
 
-        <Dialog :open="editId !== null" @update:open="(v) => !v && cancelEdit()">
+        <Dialog
+            :open="editId !== null"
+            @update:open="(v) => !v && cancelEdit()"
+        >
             <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Edit {{ editing?.label }}</DialogTitle>
@@ -300,14 +337,25 @@ function destroyRole(role: RoleRow) {
                                     <input
                                         type="checkbox"
                                         class="mt-1"
-                                        :checked="editPermissions.includes(permission.value)"
-                                        @change="togglePermission('edit', permission.value)"
+                                        :checked="
+                                            editPermissions.includes(
+                                                permission.value,
+                                            )
+                                        "
+                                        @change="
+                                            togglePermission(
+                                                'edit',
+                                                permission.value,
+                                            )
+                                        "
                                     />
                                     <span>
                                         <span class="block text-sm font-medium">
                                             {{ permission.label }}
                                         </span>
-                                        <span class="block text-xs text-muted-foreground">
+                                        <span
+                                            class="block text-xs text-muted-foreground"
+                                        >
                                             {{ permission.description }}
                                         </span>
                                     </span>
@@ -318,7 +366,11 @@ function destroyRole(role: RoleRow) {
                     </div>
 
                     <DialogFooter class="gap-2 sm:justify-end">
-                        <Button type="button" variant="outline" @click="cancelEdit">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            @click="cancelEdit"
+                        >
                             Cancel
                         </Button>
                         <Button type="submit" :disabled="processing">
@@ -329,7 +381,10 @@ function destroyRole(role: RoleRow) {
             </DialogContent>
         </Dialog>
 
-        <Dialog :open="viewId !== null" @update:open="(v) => !v && (viewId = null)">
+        <Dialog
+            :open="viewId !== null"
+            @update:open="(v) => !v && (viewId = null)"
+        >
             <DialogContent class="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>{{ viewing?.label }}</DialogTitle>
@@ -339,18 +394,26 @@ function destroyRole(role: RoleRow) {
                 </DialogHeader>
 
                 <div v-if="viewing" class="space-y-4">
-                    <div class="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                        <span class="font-mono text-xs">{{ viewing.name }}</span>
+                    <div
+                        class="flex flex-wrap gap-3 text-sm text-muted-foreground"
+                    >
+                        <span class="font-mono text-xs">{{
+                            viewing.name
+                        }}</span>
                         <span>·</span>
                         <span
                             >{{ viewing.users_count }}
-                            {{ viewing.users_count === 1 ? 'user' : 'users' }}</span
+                            {{
+                                viewing.users_count === 1 ? 'user' : 'users'
+                            }}</span
                         >
                         <span v-if="viewing.is_system">· System role</span>
                     </div>
 
                     <div>
-                        <h3 class="mb-2 text-sm font-medium">Assigned access</h3>
+                        <h3 class="mb-2 text-sm font-medium">
+                            Assigned access
+                        </h3>
                         <ul
                             v-if="viewing.permission_labels.length"
                             class="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground"
@@ -369,7 +432,11 @@ function destroyRole(role: RoleRow) {
                 </div>
 
                 <DialogFooter>
-                    <Button type="button" variant="outline" @click="viewId = null">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="viewId = null"
+                    >
                         Close
                     </Button>
                 </DialogFooter>
@@ -388,13 +455,15 @@ function destroyRole(role: RoleRow) {
                 </thead>
                 <tbody>
                     <tr
-                        v-for="role in roles"
+                        v-for="role in roles.data"
                         :key="role.id"
                         class="border-b align-top last:border-0"
                     >
                         <td class="px-4 py-3">
                             <div class="font-medium">{{ role.label }}</div>
-                            <div class="font-mono text-xs text-muted-foreground">
+                            <div
+                                class="font-mono text-xs text-muted-foreground"
+                            >
                                 {{ role.name }}
                             </div>
                             <span
@@ -433,7 +502,9 @@ function destroyRole(role: RoleRow) {
                                 <Button
                                     size="sm"
                                     variant="destructive"
-                                    :disabled="role.is_system || role.users_count > 0"
+                                    :disabled="
+                                        role.is_system || role.users_count > 0
+                                    "
                                     @click="destroyRole(role)"
                                 >
                                     Delete
@@ -441,7 +512,7 @@ function destroyRole(role: RoleRow) {
                             </div>
                         </td>
                     </tr>
-                    <tr v-if="roles.length === 0">
+                    <tr v-if="roles.data.length === 0">
                         <td
                             colspan="4"
                             class="px-4 py-8 text-center text-muted-foreground"
@@ -453,5 +524,7 @@ function destroyRole(role: RoleRow) {
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="roles" />
     </div>
 </template>

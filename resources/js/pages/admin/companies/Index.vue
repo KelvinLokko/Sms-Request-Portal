@@ -1,9 +1,22 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { EllipsisVertical } from '@lucide/vue';
 import { ref } from 'vue';
 import CompanyController from '@/actions/App/Http/Controllers/Admin/CompanyController';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
+import ListFilterBar from '@/components/ListFilterBar.vue';
+import type { ListFilterValues } from '@/components/ListFilterBar.vue';
+import RejectReasonDialog from '@/components/RejectReasonDialog.vue';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { confirmDialog } from '@/composables/useConfirmDialog';
 import { index } from '@/routes/admin/companies';
 
 type CompanyRow = {
@@ -16,11 +29,19 @@ type CompanyRow = {
     users_count: number;
     rejection_reason: string | null;
     created_at: string | null;
+    approved_at: string | null;
+    approver: { name: string } | null;
 };
 
-const props = defineProps<{
-    companies: { data: CompanyRow[] };
-    filters: { status: string | null };
+defineProps<{
+    companies: Paginated<CompanyRow>;
+    filters: {
+        status: string | null;
+        from: string | null;
+        to: string | null;
+        q: string | null;
+    };
+    statusOptions: { value: string; label: string }[];
 }>();
 
 defineOptions({
@@ -29,30 +50,84 @@ defineOptions({
     },
 });
 
-const rejectReason = ref<Record<number, string>>({});
+const rejectOpen = ref(false);
+const rejectTarget = ref<CompanyRow | null>(null);
 
-function filterStatus(status: string | null) {
-    router.get(index.url(), status ? { status } : {}, { preserveState: true });
+function applyFilters(values: ListFilterValues) {
+    router.get(
+        index.url(),
+        {
+            ...(values.status ? { status: values.status } : {}),
+            ...(values.from ? { from: values.from } : {}),
+            ...(values.to ? { to: values.to } : {}),
+            ...(values.q ? { q: values.q } : {}),
+        },
+        { preserveState: true, preserveScroll: true },
+    );
 }
 
-function approve(id: number) {
-    router.post(CompanyController.approve.url(id));
+function resetFilters() {
+    router.get(index.url(), {}, { preserveState: true, preserveScroll: true });
 }
 
-function reject(id: number) {
-    const reason = rejectReason.value[id]?.trim();
-    if (!reason) {
-        alert('A rejection reason is required.');
+function formatDate(value: string | null): string {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
+}
+
+async function approve(company: CompanyRow) {
+    const confirmed = await confirmDialog({
+        title: `Approve ${company.name}?`,
+        description:
+            'The company will be able to submit campaigns once approved.',
+        confirmLabel: 'Approve',
+        cancelLabel: 'Cancel',
+    });
+
+    if (!confirmed) {
         return;
     }
-    router.post(CompanyController.reject.url(id), { rejection_reason: reason });
+
+    router.post(CompanyController.approve.url(company.id));
 }
 
-function suspend(id: number) {
-    if (!confirm('Suspend this company?')) {
+function openReject(company: CompanyRow) {
+    rejectTarget.value = company;
+    rejectOpen.value = true;
+}
+
+function confirmReject(reason: string) {
+    if (!rejectTarget.value) {
         return;
     }
-    router.post(CompanyController.suspend.url(id));
+
+    router.post(CompanyController.reject.url(rejectTarget.value.id), {
+        rejection_reason: reason,
+    });
+    rejectTarget.value = null;
+}
+
+async function suspend(company: CompanyRow) {
+    const confirmed = await confirmDialog({
+        title: `Suspend ${company.name}?`,
+        description:
+            'The company will lose access to submit campaigns until reinstated.',
+        confirmLabel: 'Suspend',
+        cancelLabel: 'Keep active',
+        variant: 'destructive',
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    router.post(CompanyController.suspend.url(company.id));
 }
 </script>
 
@@ -65,83 +140,141 @@ function suspend(id: number) {
             description="Approve or reject company registrations before they can submit campaigns."
         />
 
-        <div class="flex flex-wrap gap-2">
-            <Button
-                size="sm"
-                :variant="!filters.status ? 'default' : 'outline'"
-                @click="filterStatus(null)"
-            >
-                All
-            </Button>
-            <Button
-                v-for="status in ['pending', 'approved', 'rejected', 'suspended']"
-                :key="status"
-                size="sm"
-                :variant="filters.status === status ? 'default' : 'outline'"
-                @click="filterStatus(status)"
-            >
-                {{ status }}
-            </Button>
-        </div>
+        <ListFilterBar
+            :status="filters.status"
+            :from="filters.from"
+            :to="filters.to"
+            :q="filters.q"
+            :status-options="statusOptions"
+            show-search
+            search-placeholder="Search company, email, or phone"
+            @apply="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="overflow-x-auto rounded-xl border">
-            <table class="w-full min-w-[40rem] text-left text-sm">
+            <table class="w-full min-w-[56rem] text-left text-sm">
                 <thead class="border-b bg-muted/40">
                     <tr>
                         <th class="px-4 py-3 font-medium">Company</th>
                         <th class="px-4 py-3 font-medium">Status</th>
                         <th class="px-4 py-3 font-medium">Users</th>
-                        <th class="px-4 py-3 font-medium">Actions</th>
+                        <th class="px-4 py-3 font-medium">Created</th>
+                        <th class="px-4 py-3 font-medium">Reviewed by</th>
+                        <th class="px-4 py-3 font-medium">Reviewed at</th>
+                        <th class="w-14 px-4 py-3 font-medium">
+                            <span class="sr-only">Actions</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
                         v-for="company in companies.data"
                         :key="company.id"
-                        class="border-b align-top last:border-0"
+                        class="border-b last:border-0"
                     >
                         <td class="px-4 py-3">
                             <div class="font-medium">{{ company.name }}</div>
                             <div class="text-muted-foreground">
                                 {{ company.email }}
                             </div>
-                        </td>
-                        <td class="px-4 py-3">{{ company.status_label }}</td>
-                        <td class="px-4 py-3">{{ company.users_count }}</td>
-                        <td class="px-4 py-3">
                             <div
-                                v-if="company.status === 'pending'"
-                                class="flex max-w-sm flex-col gap-2"
+                                v-if="company.phone"
+                                class="text-xs text-muted-foreground"
                             >
-                                <Button size="sm" @click="approve(company.id)">
-                                    Approve
-                                </Button>
-                                <textarea
-                                    v-model="rejectReason[company.id]"
-                                    class="min-h-16 w-full rounded-md border bg-background px-2 py-1 text-sm"
-                                    placeholder="Rejection reason"
-                                />
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    @click="reject(company.id)"
-                                >
-                                    Reject
-                                </Button>
+                                {{ company.phone }}
                             </div>
-                            <Button
-                                v-else-if="company.status === 'approved'"
-                                size="sm"
-                                variant="outline"
-                                @click="suspend(company.id)"
+                        </td>
+                        <td class="px-4 py-3">
+                            <div>{{ company.status_label }}</div>
+                            <p
+                                v-if="company.rejection_reason"
+                                class="mt-1 max-w-xs text-xs text-muted-foreground"
                             >
-                                Suspend
-                            </Button>
+                                {{ company.rejection_reason }}
+                            </p>
+                        </td>
+                        <td class="px-4 py-3 tabular-nums">
+                            {{ company.users_count }}
+                        </td>
+                        <td
+                            class="px-4 py-3 whitespace-nowrap text-muted-foreground"
+                        >
+                            {{ formatDate(company.created_at) }}
+                        </td>
+                        <td class="px-4 py-3">
+                            {{ company.approver?.name ?? '—' }}
+                        </td>
+                        <td
+                            class="px-4 py-3 whitespace-nowrap text-muted-foreground"
+                        >
+                            {{ formatDate(company.approved_at) }}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <DropdownMenu
+                                v-if="
+                                    company.status === 'pending' ||
+                                    company.status === 'approved'
+                                "
+                            >
+                                <DropdownMenuTrigger as-child>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        :aria-label="`Actions for ${company.name}`"
+                                    >
+                                        <EllipsisVertical class="size-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                        v-if="company.status === 'pending'"
+                                        @click="approve(company)"
+                                    >
+                                        Approve
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        v-if="company.status === 'pending'"
+                                        class="text-destructive focus:text-destructive"
+                                        @click="openReject(company)"
+                                    >
+                                        Reject
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        v-if="company.status === 'approved'"
+                                        class="text-destructive focus:text-destructive"
+                                        @click="suspend(company)"
+                                    >
+                                        Suspend
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <span v-else class="text-muted-foreground">—</span>
+                        </td>
+                    </tr>
+                    <tr v-if="companies.data.length === 0">
+                        <td
+                            colspan="7"
+                            class="px-4 py-8 text-center text-muted-foreground"
+                        >
+                            No companies match the current filters.
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="companies" />
+
+        <RejectReasonDialog
+            v-model:open="rejectOpen"
+            :title="
+                rejectTarget ? `Reject ${rejectTarget.name}?` : 'Reject company'
+            "
+            description="Provide a clear reason. This will be shown to the company."
+            confirm-label="Reject company"
+            @confirm="confirmReject"
+        />
     </div>
 </template>

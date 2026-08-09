@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import ListPagination from '@/components/ListPagination.vue';
+import type { Paginated } from '@/types';
+import ListFilterBar from '@/components/ListFilterBar.vue';
+import type { ListFilterValues } from '@/components/ListFilterBar.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { index as paymentsIndex, report } from '@/routes/admin/payments';
+
 type Row = {
     id: number;
     status: string;
@@ -26,10 +30,15 @@ type Row = {
     rejection_reason: string | null;
 };
 
-const props = defineProps<{
-    payments: { data: Row[] };
-    filters: { status: string | null; q: string | null };
-    statuses: { value: string; label: string }[];
+defineProps<{
+    payments: Paginated<Row>;
+    filters: {
+        status: string | null;
+        from: string | null;
+        to: string | null;
+        q: string | null;
+    };
+    statusOptions: { value: string; label: string }[];
 }>();
 
 defineOptions({
@@ -41,34 +50,32 @@ defineOptions({
     },
 });
 
-function filterStatus(status: string | null) {
+function applyFilters(values: ListFilterValues) {
     router.get(
         report.url(),
         {
-            ...(status ? { status } : {}),
-            ...(props.filters.q ? { q: props.filters.q } : {}),
+            ...(values.status ? { status: values.status } : {}),
+            ...(values.from ? { from: values.from } : {}),
+            ...(values.to ? { to: values.to } : {}),
+            ...(values.q ? { q: values.q } : {}),
         },
-        { preserveState: true },
+        { preserveState: true, preserveScroll: true },
     );
 }
 
-function search(event: Event) {
-    const value = (event.target as HTMLInputElement).value.trim();
-    router.get(
-        report.url(),
-        {
-            ...(props.filters.status ? { status: props.filters.status } : {}),
-            ...(value ? { q: value } : {}),
-        },
-        { preserveState: true, replace: true },
-    );
+function resetFilters() {
+    router.get(report.url(), {}, { preserveState: true, preserveScroll: true });
 }
 
 function formatDate(value: string | null): string {
     if (!value) {
         return '—';
     }
-    return new Date(value).toLocaleString();
+
+    return new Date(value).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
 }
 </script>
 
@@ -86,58 +93,47 @@ function formatDate(value: string | null): string {
             </Button>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-            <Button
-                size="sm"
-                :variant="!filters.status ? 'default' : 'outline'"
-                @click="filterStatus(null)"
-            >
-                All
-            </Button>
-            <Button
-                v-for="status in statuses"
-                :key="status.value"
-                size="sm"
-                :variant="filters.status === status.value ? 'default' : 'outline'"
-                @click="filterStatus(status.value)"
-            >
-                {{ status.label }}
-            </Button>
-            <Input
-                class="max-w-xs"
-                type="search"
-                placeholder="Search company, invoice, MoMo ref"
-                :default-value="filters.q ?? ''"
-                @change="search"
-            />
-        </div>
+        <ListFilterBar
+            :status="filters.status"
+            :from="filters.from"
+            :to="filters.to"
+            :q="filters.q"
+            :status-options="statusOptions"
+            show-search
+            search-placeholder="Search company, invoice, or MoMo ref"
+            @apply="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="overflow-x-auto rounded-xl border">
-            <table class="w-full min-w-[56rem] text-left text-sm">
+            <table class="w-full min-w-[60rem] text-left text-sm">
                 <thead class="border-b bg-muted/40">
                     <tr>
-                        <th class="px-4 py-3 font-medium">When</th>
+                        <th class="px-4 py-3 font-medium">Submitted</th>
                         <th class="px-4 py-3 font-medium">Invoice</th>
                         <th class="px-4 py-3 font-medium">Company</th>
                         <th class="px-4 py-3 font-medium">MoMo</th>
                         <th class="px-4 py-3 font-medium">Amount</th>
                         <th class="px-4 py-3 font-medium">Status</th>
+                        <th class="px-4 py-3 font-medium">Reviewed by</th>
+                        <th class="px-4 py-3 font-medium">Reviewed at</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
                         v-for="row in payments.data"
                         :key="row.id"
-                        class="border-b align-top last:border-0"
+                        class="border-b last:border-0"
                     >
-                        <td class="px-4 py-3 text-xs text-muted-foreground">
-                            <div>{{ formatDate(row.created_at) }}</div>
-                            <div v-if="row.verified_at">
-                                Verified {{ formatDate(row.verified_at) }}
-                            </div>
+                        <td
+                            class="px-4 py-3 whitespace-nowrap text-muted-foreground"
+                        >
+                            {{ formatDate(row.created_at) }}
                         </td>
                         <td class="px-4 py-3">
-                            <div class="font-mono text-xs">{{ row.invoice.number }}</div>
+                            <div class="font-mono text-xs">
+                                {{ row.invoice.number }}
+                            </div>
                             <div class="text-muted-foreground">
                                 {{ row.invoice.campaign_reference }}
                             </div>
@@ -149,7 +145,9 @@ function formatDate(value: string | null): string {
                             </div>
                         </td>
                         <td class="px-4 py-3">
-                            <div class="font-mono text-xs">{{ row.momo_reference }}</div>
+                            <div class="font-mono text-xs">
+                                {{ row.momo_reference }}
+                            </div>
                             <div>{{ row.payer_number }}</div>
                             <a
                                 v-if="row.proof_url"
@@ -163,29 +161,33 @@ function formatDate(value: string | null): string {
                         <td class="px-4 py-3">
                             <div>{{ row.status_label }}</div>
                             <div
-                                v-if="row.verifier"
-                                class="text-xs text-muted-foreground"
-                            >
-                                by {{ row.verifier.name }}
-                            </div>
-                            <div
                                 v-if="row.rejection_reason"
-                                class="mt-1 text-xs text-red-600"
+                                class="mt-1 max-w-xs text-xs text-muted-foreground"
                             >
                                 {{ row.rejection_reason }}
                             </div>
                         </td>
+                        <td class="px-4 py-3">
+                            {{ row.verifier?.name ?? '—' }}
+                        </td>
+                        <td
+                            class="px-4 py-3 whitespace-nowrap text-muted-foreground"
+                        >
+                            {{ formatDate(row.verified_at) }}
+                        </td>
                     </tr>
                     <tr v-if="payments.data.length === 0">
                         <td
-                            colspan="6"
+                            colspan="8"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
-                            No payments match these filters.
+                            No payments match the current filters.
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
+
+        <ListPagination :paginator="payments" />
     </div>
 </template>

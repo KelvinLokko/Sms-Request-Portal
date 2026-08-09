@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import CampaignController from '@/actions/App/Http/Controllers/CampaignController';
 import Heading from '@/components/Heading.vue';
-import InputError from '@/components/InputError.vue';
+import SmsPhonePreview from '@/components/SmsPhonePreview.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { index } from '@/routes/campaigns';
-import { download as downloadTemplateRoute } from '@/routes/campaigns/templates';
+import { confirmDialog } from '@/composables/useConfirmDialog';
+import { useRecipientListPolling } from '@/composables/useRecipientListPolling';
+import { edit, index } from '@/routes/campaigns';
 
 type Campaign = {
     id: number;
@@ -56,7 +55,6 @@ type Campaign = {
 
 const props = defineProps<{
     campaign: Campaign;
-    senderIds: { id: number; value: string }[];
     maxMessageLength: number;
     warnThreshold: number;
     can: {
@@ -76,47 +74,138 @@ defineOptions({
     },
 });
 
+const page = usePage();
 
-function submitCampaign() {
-    if (!confirm('Submit this campaign for review? The quote will be frozen.')) {
+const pageErrors = computed(() => {
+    const errors = page.props.errors ?? {};
+
+    return Object.values(errors).flatMap((value) =>
+        Array.isArray(value) ? value : [String(value)],
+    );
+});
+const flashSuccess = computed(
+    () =>
+        (page.props.flash as { success?: string | null } | undefined)?.success,
+);
+const flashError = computed(
+    () => (page.props.flash as { error?: string | null } | undefined)?.error,
+);
+
+const listReady = computed(() => {
+    const list = props.campaign.recipient_list;
+
+    return (
+        list !== null && list.status === 'completed' && list.billable_count > 0
+    );
+});
+
+const listPending = computed(() => {
+    const status = props.campaign.recipient_list?.status;
+
+    return status === 'pending' || status === 'processing';
+});
+
+const listStatus = computed(
+    () => props.campaign.recipient_list?.status ?? null,
+);
+
+useRecipientListPolling(listStatus);
+
+const quoteCost = computed(
+    () => props.campaign.quoted_cost ?? props.campaign.estimated_cost ?? '—',
+);
+
+const summaryStats = computed(() => [
+    { label: 'Page count', value: String(props.campaign.pages) },
+    {
+        label: 'Recipients',
+        value:
+            props.campaign.billable_recipients !== null
+                ? props.campaign.billable_recipients.toLocaleString()
+                : '—',
+    },
+    { label: 'Rate', value: props.campaign.rate_per_sms ?? '—' },
+    { label: 'Estimated cost', value: quoteCost.value },
+]);
+
+function formatDate(value: string | null): string {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
+}
+
+async function submitCampaign() {
+    const confirmed = await confirmDialog({
+        title: 'Submit for review?',
+        description:
+            'This campaign will be sent to our team for review. The quote will be frozen.',
+        confirmLabel: 'Submit for review',
+        cancelLabel: 'Keep drafting',
+    });
+
+    if (!confirmed) {
         return;
     }
+
     router.post(CampaignController.submit.url(props.campaign.id));
 }
 
-function cancelCampaign() {
-    if (!confirm('Cancel this campaign?')) {
+async function cancelCampaign() {
+    const confirmed = await confirmDialog({
+        title: 'Cancel this campaign?',
+        description:
+            'The campaign will be cancelled and can no longer be submitted.',
+        confirmLabel: 'Cancel campaign',
+        cancelLabel: 'Keep campaign',
+        variant: 'destructive',
+    });
+
+    if (!confirmed) {
         return;
     }
+
     router.post(CampaignController.cancel.url(props.campaign.id));
-}
-
-function toLocalInput(value: string | null): string {
-    if (!value) {
-        return '';
-    }
-    const date = new Date(value);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function downloadTemplateUrl(type: 'bulk' | 'personalised-bulk'): string {
-    return downloadTemplateRoute.url(type);
 }
 </script>
 
 <template>
     <Head :title="campaign.reference" />
 
-    <div class="mx-auto flex max-w-3xl flex-col gap-6 p-4">
+    <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-4 sm:p-6 lg:p-8">
         <div class="flex flex-wrap items-start justify-between gap-4">
-            <Heading
-                :title="campaign.reference"
-                :description="campaign.status_label"
-            />
+            <div>
+                <Heading :title="campaign.name || campaign.reference" />
+                <div
+                    class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+                >
+                    <span
+                        class="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground"
+                    >
+                        {{ campaign.status_label }}
+                    </span>
+                    <span v-if="campaign.name" class="font-mono text-xs">
+                        {{ campaign.reference }}
+                    </span>
+                </div>
+            </div>
+
             <div class="flex flex-wrap gap-2">
+                <Button v-if="can.update" variant="outline" as-child>
+                    <Link :href="edit(campaign.id)">Edit campaign</Link>
+                </Button>
                 <Button
                     v-if="can.submit"
+                    :disabled="!listReady"
+                    :title="
+                        listReady
+                            ? undefined
+                            : 'Recipient list must finish validating with at least one billable contact'
+                    "
                     @click="submitCampaign"
                 >
                     Submit for review
@@ -132,8 +221,29 @@ function downloadTemplateUrl(type: 'bulk' | 'personalised-bulk'): string {
         </div>
 
         <div
+            v-if="flashSuccess"
+            class="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm"
+            role="status"
+        >
+            {{ flashSuccess }}
+        </div>
+
+        <div
+            v-if="flashError || pageErrors.length"
+            class="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-800 dark:text-red-200"
+            role="alert"
+        >
+            <p v-if="flashError">{{ flashError }}</p>
+            <ul v-if="pageErrors.length" class="list-disc space-y-1 pl-5">
+                <li v-for="(error, index) in pageErrors" :key="index">
+                    {{ error }}
+                </li>
+            </ul>
+        </div>
+
+        <div
             v-if="campaign.changes_requested_reason"
-            class="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm"
+            class="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm"
         >
             <p class="font-medium">Changes requested</p>
             <p class="mt-1 text-muted-foreground">
@@ -143,7 +253,7 @@ function downloadTemplateUrl(type: 'bulk' | 'personalised-bulk'): string {
 
         <div
             v-if="campaign.rejection_reason"
-            class="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm"
+            class="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm"
         >
             <p class="font-medium">Rejected</p>
             <p class="mt-1 text-muted-foreground">
@@ -152,294 +262,186 @@ function downloadTemplateUrl(type: 'bulk' | 'personalised-bulk'): string {
         </div>
 
         <div
-            v-if="campaign.invoice"
-            class="rounded-lg border p-3 text-sm"
+            class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start"
         >
-            <p class="font-medium">Invoice {{ campaign.invoice.number }}</p>
-            <p class="mt-1 text-muted-foreground">
-                {{ campaign.invoice.total }} ·
-                <Link
-                    :href="`/invoices/${campaign.invoice.id}`"
-                    class="underline underline-offset-4"
+            <div class="min-w-0 space-y-8">
+                <dl
+                    class="grid grid-cols-2 gap-x-6 gap-y-4 border-y py-4 text-sm sm:grid-cols-4"
                 >
-                    View invoice
-                </Link>
-            </p>
+                    <div v-for="stat in summaryStats" :key="stat.label">
+                        <dt class="text-muted-foreground">{{ stat.label }}</dt>
+                        <dd class="mt-0.5 font-medium tabular-nums">
+                            {{ stat.value }}
+                        </dd>
+                    </div>
+                </dl>
+
+                <section class="space-y-3">
+                    <h2 class="text-sm font-medium">Message</h2>
+                    <p
+                        class="text-sm leading-relaxed whitespace-pre-wrap"
+                        :class="
+                            campaign.message_body ? '' : 'text-muted-foreground'
+                        "
+                    >
+                        {{ campaign.message_body || 'No message yet.' }}
+                    </p>
+                    <p class="text-sm text-muted-foreground">
+                        Sender
+                        <span class="font-medium text-foreground">
+                            {{ campaign.sender_id ?? '—' }}
+                        </span>
+                        ·
+                        {{
+                            campaign.is_personalised
+                                ? 'Personalised bulk'
+                                : 'Bulk'
+                        }}
+                    </p>
+                    <p
+                        v-if="campaign.exceeds_621_warning"
+                        class="text-sm text-amber-700 dark:text-amber-300"
+                    >
+                        Message exceeds {{ warnThreshold }} characters.
+                    </p>
+                    <p
+                        v-if="campaign.requires_manual_cost_review"
+                        class="text-sm text-amber-700 dark:text-amber-300"
+                    >
+                        Unicode encoding — manual cost review required after
+                        submission.
+                    </p>
+                </section>
+
+                <section class="space-y-3 border-t pt-6">
+                    <h2 class="text-sm font-medium">Recipients</h2>
+                    <template v-if="campaign.recipient_list">
+                        <p class="text-sm">
+                            <span class="font-medium">
+                                {{ campaign.recipient_list.original_filename }}
+                            </span>
+                            <span class="text-muted-foreground">
+                                · {{ campaign.recipient_list.status_label }}
+                            </span>
+                        </p>
+                        <p
+                            v-if="listPending"
+                            class="text-sm text-muted-foreground"
+                        >
+                            Validation is running. This page updates
+                            automatically when it finishes.
+                        </p>
+                        <dl
+                            class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4"
+                        >
+                            <div>
+                                <dt class="text-muted-foreground">Valid</dt>
+                                <dd class="font-medium tabular-nums">
+                                    {{ campaign.recipient_list.valid_count }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-muted-foreground">Invalid</dt>
+                                <dd class="font-medium tabular-nums">
+                                    {{ campaign.recipient_list.invalid_count }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-muted-foreground">
+                                    Duplicates
+                                </dt>
+                                <dd class="font-medium tabular-nums">
+                                    {{
+                                        campaign.recipient_list.duplicate_count
+                                    }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-muted-foreground">Billable</dt>
+                                <dd class="font-medium tabular-nums">
+                                    {{ campaign.recipient_list.billable_count }}
+                                </dd>
+                            </div>
+                        </dl>
+                        <p
+                            v-if="campaign.recipient_list.error_message"
+                            class="text-sm text-red-600"
+                        >
+                            {{ campaign.recipient_list.error_message }}
+                        </p>
+                        <p
+                            v-if="campaign.recipient_list.has_rejected_export"
+                            class="text-sm"
+                        >
+                            <a
+                                :href="
+                                    CampaignController.downloadRejected.url(
+                                        campaign.id,
+                                    )
+                                "
+                                class="underline underline-offset-4"
+                            >
+                                Download rejected rows
+                            </a>
+                        </p>
+                    </template>
+                    <p v-else class="text-sm text-muted-foreground">
+                        No recipient list uploaded yet.
+                    </p>
+                </section>
+
+                <section class="space-y-3 border-t pt-6">
+                    <h2 class="text-sm font-medium">Schedule</h2>
+                    <dl class="grid gap-3 text-sm sm:grid-cols-2">
+                        <div>
+                            <dt class="text-muted-foreground">
+                                Requested send
+                            </dt>
+                            <dd class="mt-0.5 font-medium">
+                                {{ formatDate(campaign.requested_send_at) }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-muted-foreground">Hard deadline</dt>
+                            <dd class="mt-0.5 font-medium">
+                                {{ formatDate(campaign.hard_deadline_at) }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section
+                    v-if="campaign.invoice"
+                    class="space-y-1 border-t pt-6 text-sm"
+                >
+                    <h2 class="text-sm font-medium">Invoice</h2>
+                    <p class="text-muted-foreground">
+                        <Link
+                            :href="`/invoices/${campaign.invoice.id}`"
+                            class="font-medium text-foreground underline-offset-4 hover:underline"
+                        >
+                            {{ campaign.invoice.number }}
+                        </Link>
+                        · {{ campaign.invoice.total }}
+                    </p>
+                </section>
+            </div>
+
+            <SmsPhonePreview
+                class="lg:sticky lg:top-6"
+                :sender="campaign.sender_id"
+                :message="campaign.message_body"
+                :max-length="maxMessageLength"
+            />
         </div>
 
-        <section class="grid gap-3 rounded-xl border p-4 text-sm">
-            <h2 class="font-medium">Quote summary</h2>
-            <dl class="grid gap-2 sm:grid-cols-2">
-                <div>
-                    <dt class="text-muted-foreground">Pages / segments</dt>
-                    <dd>{{ campaign.pages }}</dd>
-                </div>
-                <div>
-                    <dt class="text-muted-foreground">Billable recipients</dt>
-                    <dd>{{ campaign.billable_recipients ?? '—' }}</dd>
-                </div>
-                <div>
-                    <dt class="text-muted-foreground">Rate (GHS)</dt>
-                    <dd class="font-mono">{{ campaign.rate_per_sms ?? '—' }}</dd>
-                </div>
-                <div>
-                    <dt class="text-muted-foreground">Estimated / quoted</dt>
-                    <dd>
-                        {{ campaign.quoted_cost ?? campaign.estimated_cost ?? '—' }}
-                    </dd>
-                </div>
-            </dl>
-            <p
-                v-if="campaign.exceeds_621_warning"
-                class="text-amber-700 dark:text-amber-300"
+        <p class="text-sm text-muted-foreground">
+            <Link
+                :href="index()"
+                class="underline-offset-4 hover:text-foreground hover:underline"
             >
-                Message exceeds {{ warnThreshold }} characters.
-            </p>
-            <p
-                v-if="campaign.requires_manual_cost_review"
-                class="text-amber-700 dark:text-amber-300"
-            >
-                Unicode encoding — manual cost review required after submission.
-            </p>
-        </section>
-
-        <section
-            v-if="can.update"
-            class="rounded-xl border p-4"
-        >
-            <h2 class="mb-4 font-medium">Edit draft</h2>
-            <Form
-                v-bind="CampaignController.update.form(campaign.id)"
-                class="space-y-4"
-                v-slot="{ errors, processing }"
-            >
-                <div class="grid gap-2">
-                    <Label for="name">Internal name</Label>
-                    <Input
-                        id="name"
-                        name="name"
-                        :default-value="campaign.name ?? ''"
-                    />
-                    <InputError :message="errors.name" />
-                </div>
-                <div class="grid gap-2">
-                    <Label for="sender_id_id">Sender ID</Label>
-                    <select
-                        id="sender_id_id"
-                        name="sender_id_id"
-                        class="h-9 rounded-md border bg-background px-3 text-sm"
-                        :value="campaign.sender_id_id ?? ''"
-                    >
-                        <option value="">Select approved sender ID</option>
-                        <option
-                            v-for="sender in senderIds"
-                            :key="sender.id"
-                            :value="sender.id"
-                        >
-                            {{ sender.value }}
-                        </option>
-                    </select>
-                    <InputError :message="errors.sender_id_id" />
-                </div>
-                <div class="grid gap-2">
-                    <Label for="message_body">Message</Label>
-                    <textarea
-                        id="message_body"
-                        name="message_body"
-                        rows="6"
-                        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                        :maxlength="maxMessageLength"
-                        :value="campaign.message_body ?? ''"
-                    />
-                    <InputError :message="errors.message_body" />
-                </div>
-                <fieldset class="grid gap-3">
-                    <legend class="text-sm font-medium">Campaign type</legend>
-                    <label class="flex items-start gap-3 text-sm">
-                        <input
-                            type="radio"
-                            name="campaign_type"
-                            value="bulk"
-                            class="mt-1"
-                            :checked="!campaign.is_personalised"
-                            required
-                        />
-                        <span>
-                            <span class="font-medium">Bulk</span>
-                            — same message for every contact
-                        </span>
-                    </label>
-                    <label class="flex items-start gap-3 text-sm">
-                        <input
-                            type="radio"
-                            name="campaign_type"
-                            value="personalised_bulk"
-                            class="mt-1"
-                            :checked="campaign.is_personalised"
-                        />
-                        <span>
-                            <span class="font-medium">Personalised bulk</span>
-                            — uses
-                            <code class="rounded bg-muted px-1">[HEADER]</code>
-                            placeholders
-                        </span>
-                    </label>
-                    <InputError :message="errors.campaign_type" />
-                    <p class="text-sm">
-                        <a
-                            :href="
-                                downloadTemplateUrl(
-                                    campaign.is_personalised
-                                        ? 'personalised-bulk'
-                                        : 'bulk',
-                                )
-                            "
-                            class="font-medium text-primary underline underline-offset-4"
-                        >
-                            Download CSV template
-                        </a>
-                    </p>
-                </fieldset>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label for="requested_send_at">Requested send time</Label>
-                        <Input
-                            id="requested_send_at"
-                            name="requested_send_at"
-                            type="datetime-local"
-                            :default-value="toLocalInput(campaign.requested_send_at)"
-                        />
-                        <InputError :message="errors.requested_send_at" />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="hard_deadline_at">Hard deadline</Label>
-                        <Input
-                            id="hard_deadline_at"
-                            name="hard_deadline_at"
-                            type="datetime-local"
-                            :default-value="toLocalInput(campaign.hard_deadline_at)"
-                        />
-                        <InputError :message="errors.hard_deadline_at" />
-                    </div>
-                </div>
-                <Button type="submit" :disabled="processing">
-                    <Spinner v-if="processing" />
-                    Save changes
-                </Button>
-            </Form>
-        </section>
-
-        <section
-            v-else
-            class="rounded-xl border p-4 text-sm"
-        >
-            <h2 class="mb-2 font-medium">Message</h2>
-            <p class="whitespace-pre-wrap">{{ campaign.message_body }}</p>
-            <p class="mt-3 text-muted-foreground">
-                Sender:
-                <span class="font-mono text-foreground">{{
-                    campaign.sender_id ?? '—'
-                }}</span>
-            </p>
-        </section>
-
-        <section class="rounded-xl border p-4">
-            <h2 class="mb-3 font-medium">Recipient list</h2>
-
-            <div
-                v-if="campaign.recipient_list"
-                class="mb-4 space-y-1 text-sm"
-            >
-                <p>
-                    File:
-                    <span class="font-medium">{{
-                        campaign.recipient_list.original_filename
-                    }}</span>
-                    · {{ campaign.recipient_list.status_label }}
-                </p>
-                <p>
-                    {{ campaign.recipient_list.valid_count }} valid /
-                    {{ campaign.recipient_list.invalid_count }} invalid /
-                    {{ campaign.recipient_list.duplicate_count }} duplicates →
-                    <strong>{{ campaign.recipient_list.billable_count }} billable</strong>
-                </p>
-                <p
-                    v-if="campaign.recipient_list.error_message"
-                    class="text-red-600"
-                >
-                    {{ campaign.recipient_list.error_message }}
-                </p>
-                <p v-if="campaign.recipient_list.has_rejected_export">
-                    <a
-                        :href="
-                            CampaignController.downloadRejected.url(campaign.id)
-                        "
-                        class="underline underline-offset-4"
-                    >
-                        Download rejected rows
-                    </a>
-                </p>
-            </div>
-            <p
-                v-else
-                class="mb-4 text-sm text-muted-foreground"
-            >
-                No recipient list uploaded yet.
-            </p>
-
-            <Form
-                v-if="can.upload"
-                v-bind="CampaignController.uploadRecipients.form(campaign.id)"
-                enctype="multipart/form-data"
-                class="space-y-3"
-                v-slot="{ errors, processing }"
-            >
-                <div class="grid gap-2">
-                    <Label for="file">Upload CSV or XLSX</Label>
-                    <Input
-                        id="file"
-                        type="file"
-                        name="file"
-                        accept=".csv,.txt,.xlsx"
-                        required
-                    />
-                    <p class="text-xs text-muted-foreground">
-                        Use the
-                        <a
-                            :href="
-                                downloadTemplateUrl(
-                                    campaign.is_personalised
-                                        ? 'personalised-bulk'
-                                        : 'bulk',
-                                )
-                            "
-                            class="underline underline-offset-4"
-                        >
-                            {{
-                                campaign.is_personalised
-                                    ? 'personalised bulk'
-                                    : 'bulk'
-                            }}
-                            template
-                        </a>
-                        so columns match your campaign type. Prefer a
-                        <code class="rounded bg-muted px-1">phone</code>
-                        column. Save Excel columns as Text to avoid number
-                        corruption.
-                    </p>
-                    <InputError :message="errors.file" />
-                </div>
-                <Button type="submit" :disabled="processing">
-                    <Spinner v-if="processing" />
-                    Upload &amp; validate
-                </Button>
-            </Form>
-        </section>
-
-        <p class="text-sm">
-            <Link :href="index()" class="underline underline-offset-4"
-                >Back to campaigns</Link
-            >
+                Back to campaigns
+            </Link>
         </p>
     </div>
 </template>
