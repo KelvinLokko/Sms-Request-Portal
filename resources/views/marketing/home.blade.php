@@ -164,17 +164,15 @@
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <a
                 href="{{ route('home') }}"
-                class="inline-flex min-h-11 items-center gap-2.5 text-lg font-bold tracking-tight text-white"
+                class="inline-flex min-h-11 items-center"
             >
-                <span class="flex size-9 items-center justify-center rounded-2xl bg-signal text-ink" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" class="size-5">
-                        <rect x="4" y="8" width="26" height="18" rx="5" fill="currentColor" opacity="0.92"/>
-                        <path d="M12 15.5h10M12 19.5h7" stroke="#ECFCCB" stroke-width="2.2" stroke-linecap="round"/>
-                        <circle cx="32" cy="11" r="3.5" fill="currentColor" opacity="0.55"/>
-                        <circle cx="32" cy="11" r="1.6" fill="#ECFCCB"/>
-                    </svg>
-                </span>
-                {{ config('marketing.brand') }}
+                <img
+                    src="{{ asset('images/logo-white-fordark.png') }}"
+                    alt="{{ config('marketing.brand') }}"
+                    width="316"
+                    height="69"
+                    class="h-10 w-auto sm:h-11"
+                />
             </a>
 
             <nav class="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-sm lg:flex" aria-label="Primary">
@@ -824,8 +822,16 @@
     <footer class="border-t border-border bg-surface" aria-label="Site footer">
         <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_1fr_1fr_1fr] lg:px-8">
             <div>
-                <p class="text-lg font-bold text-ink">{{ config('marketing.brand') }}</p>
-                <p class="mt-2 max-w-sm text-sm text-muted-foreground">
+                <a href="{{ route('home') }}" class="inline-flex">
+                    <img
+                        src="{{ asset('images/logo.png') }}"
+                        alt="{{ config('marketing.brand') }}"
+                        width="316"
+                        height="69"
+                        class="h-9 w-auto object-contain"
+                    />
+                </a>
+                <p class="mt-3 max-w-sm text-sm text-muted-foreground">
                     A managed SMS request portal. We send campaigns on your behalf — this site does not include a self-service send button.
                 </p>
             </div>

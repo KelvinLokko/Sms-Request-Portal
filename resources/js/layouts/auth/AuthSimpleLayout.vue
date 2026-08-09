@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { home } from '@/routes';
 
 defineProps<{
@@ -19,16 +18,15 @@ const brand = usePage().props.name;
         >
             <a
                 :href="home.url()"
-                class="relative z-10 inline-flex items-center gap-3 transition-opacity hover:opacity-90"
+                class="relative z-10 inline-flex items-center transition-opacity hover:opacity-90"
             >
-                <span
-                    class="flex size-9 items-center justify-center rounded-xl bg-signal text-ink"
-                >
-                    <AppLogoIcon class="size-5" />
-                </span>
-                <span class="text-base font-semibold tracking-tight">
-                    {{ brand }}
-                </span>
+                <img
+                    src="/images/logo-white-fordark.png"
+                    :alt="brand"
+                    width="316"
+                    height="69"
+                    class="h-10 w-auto"
+                />
             </a>
         </div>
 
@@ -73,19 +71,18 @@ const brand = usePage().props.name;
 
             <a
                 :href="home.url()"
-                class="relative z-10 inline-flex items-center gap-3 self-start transition-opacity hover:opacity-90"
+                class="relative z-10 inline-flex items-center self-start transition-opacity hover:opacity-90"
             >
-                <span
-                    class="flex size-10 items-center justify-center rounded-xl bg-signal text-ink shadow-sm shadow-black/20"
-                >
-                    <AppLogoIcon class="size-6" />
-                </span>
-                <span class="text-lg font-semibold tracking-tight">
-                    {{ brand }}
-                </span>
+                <img
+                    src="/images/logo-white-fordark.png"
+                    :alt="brand"
+                    width="316"
+                    height="69"
+                    class="h-11 w-auto"
+                />
             </a>
 
-            <div class="relative z-10 max-w-md animate-fade-up">
+            <div class="animate-fade-up relative z-10 max-w-md">
                 <p
                     class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-signal uppercase"
                 >
@@ -111,7 +108,7 @@ const brand = usePage().props.name;
         <div
             class="flex flex-1 flex-col justify-center px-5 py-8 sm:px-10 lg:px-16 lg:py-12"
         >
-            <div class="mx-auto w-full max-w-md animate-fade-up-delay">
+            <div class="animate-fade-up-delay mx-auto w-full max-w-md">
                 <div class="mb-8 space-y-2">
                     <h2
                         class="text-2xl font-semibold tracking-tight text-foreground"

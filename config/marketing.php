@@ -11,7 +11,7 @@ return [
     |
     */
 
-    'brand' => env('MARKETING_BRAND', env('APP_NAME', 'SMS Client Portal')),
+    'brand' => env('MARKETING_BRAND', env('APP_NAME', 'smsbulkportal')),
 
     'tagline' => env(
         'MARKETING_TAGLINE',

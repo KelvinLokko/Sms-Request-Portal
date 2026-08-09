@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { home } from '@/routes';
 
 const page = usePage();
@@ -20,12 +19,14 @@ defineProps<{
             class="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r"
         >
             <div class="absolute inset-0 bg-zinc-900" />
-            <a
-                :href="home.url()"
-                class="relative z-20 flex items-center text-lg font-medium"
-            >
-                <AppLogoIcon class="mr-2 size-8 fill-current text-white" />
-                {{ name }}
+            <a :href="home.url()" class="relative z-20 flex items-center">
+                <img
+                    src="/images/logo-white-fordark.png"
+                    :alt="name"
+                    width="316"
+                    height="69"
+                    class="h-10 w-auto"
+                />
             </a>
         </div>
         <div class="lg:p-8">

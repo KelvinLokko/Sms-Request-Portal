@@ -6,17 +6,15 @@ const name = usePage().props.name;
 </script>
 
 <template>
-    <div
-        class="flex aspect-square size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-    >
-        <AppLogoIcon class="size-5" />
-    </div>
-    <div class="ml-2 grid min-w-0 flex-1 text-left text-sm group-data-[collapsible=icon]:hidden">
-        <span class="truncate leading-tight font-semibold tracking-tight text-foreground">
-            {{ name }}
-        </span>
-        <span class="truncate text-[11px] leading-tight text-muted-foreground">
-            Managed SMS requests
-        </span>
-    </div>
+    <AppLogoIcon
+        class="hidden size-8 shrink-0 rounded-md object-cover group-data-[collapsible=icon]:block"
+    />
+    <img
+        src="/images/logo.png"
+        :alt="name"
+        width="316"
+        height="69"
+        decoding="async"
+        class="h-9 w-auto max-w-[14rem] object-contain object-left group-data-[collapsible=icon]:hidden"
+    />
 </template>
