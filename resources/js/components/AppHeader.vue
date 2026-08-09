@@ -100,7 +100,14 @@ const rightNavItems: NavItem[] = [
                                     alt=""
                                     width="316"
                                     height="69"
-                                    class="h-9 w-auto object-contain"
+                                    class="h-9 w-auto object-contain dark:hidden"
+                                />
+                                <img
+                                    src="/images/logo-white-fordark.png"
+                                    alt=""
+                                    width="316"
+                                    height="69"
+                                    class="hidden h-9 w-auto object-contain dark:block"
                                 />
                             </SheetHeader>
                             <div
