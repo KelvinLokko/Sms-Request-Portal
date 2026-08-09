@@ -4,9 +4,16 @@ import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { index as analyticsIndex } from '@/routes/admin/analytics';
-import { create as campaignsCreate, index as campaignsIndex, show as campaignsShow } from '@/routes/campaigns';
+import {
+    create as campaignsCreate,
+    index as campaignsIndex,
+    show as campaignsShow,
+} from '@/routes/campaigns';
 import { dashboard } from '@/routes';
-import { index as invoicesIndex, show as invoicesShow } from '@/routes/invoices';
+import {
+    index as invoicesIndex,
+    show as invoicesShow,
+} from '@/routes/invoices';
 import { index as senderIdsIndex } from '@/routes/sender-ids';
 
 type Summary = {
@@ -15,6 +22,12 @@ type Summary = {
     pending_payments: number;
     fulfilled: number;
     revenue: string;
+    billed_sms: string;
+    provider_cost: string;
+    profit: string;
+    is_loss: boolean;
+    margin_percent: number | null;
+    provider_rate: string | null;
     sms_volume: number;
 };
 
@@ -135,8 +148,8 @@ function formatDate(value: string | null): string {
                 Company {{ company.status_label.toLowerCase() }}
             </p>
             <p class="mt-1 text-muted-foreground">
-                You can register sender IDs while we review your company. Campaign
-                requests unlock once an admin approves your account.
+                You can register sender IDs while we review your company.
+                Campaign requests unlock once an admin approves your account.
             </p>
             <Button as-child class="mt-4" variant="outline">
                 <Link :href="senderIdsIndex()">Manage sender IDs</Link>
@@ -146,10 +159,12 @@ function formatDate(value: string | null): string {
         <!-- Staff KPIs -->
         <div
             v-if="isStaff && summary"
-            class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+            class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     Pending review
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -157,7 +172,9 @@ function formatDate(value: string | null): string {
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     Awaiting fulfilment
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -165,7 +182,9 @@ function formatDate(value: string | null): string {
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     Pending payments
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -173,7 +192,9 @@ function formatDate(value: string | null): string {
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     Fulfilled
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -181,19 +202,70 @@ function formatDate(value: string | null): string {
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    Paid revenue
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
+                    Client SMS billed
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
-                    {{ summary.revenue }}
+                    {{ summary.billed_sms }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    Paid invoice subtotals (ex-tax)
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
+                    Provider cost
+                </p>
+                <p class="mt-2 text-2xl font-semibold tracking-tight">
+                    {{ summary.provider_cost }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    Fulfilled campaigns · unit
+                    {{
+                        summary.provider_rate
+                            ? `${summary.provider_rate} GHS`
+                            : 'not set'
+                    }}
+                </p>
+            </div>
+            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
+                    Realized profit
+                </p>
+                <p
+                    class="mt-2 text-2xl font-semibold tracking-tight"
+                    :class="
+                        summary.is_loss
+                            ? 'text-destructive'
+                            : 'text-emerald-700 dark:text-emerald-400'
+                    "
+                >
+                    {{ summary.profit }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    Fulfilled · billed − provider
+                    <span v-if="summary.margin_percent !== null">
+                        · {{ summary.margin_percent }}% margin
+                    </span>
+                </p>
+            </div>
+            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     SMS volume
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
                     {{ summary.sms_volume.toLocaleString() }}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    Paid invoice total {{ summary.revenue }}
                 </p>
             </div>
         </div>
@@ -204,7 +276,8 @@ function formatDate(value: string | null): string {
         >
             <h2 class="font-semibold tracking-tight">Analytics</h2>
             <p class="text-sm leading-relaxed text-muted-foreground">
-                Revenue, request volume, SMS volume, and turnaround trends.
+                Revenue, profit, request volume, SMS volume, and turnaround
+                trends.
             </p>
             <Button as-child class="mt-auto w-fit">
                 <Link :href="analyticsIndex()">Open analytics</Link>
@@ -217,7 +290,9 @@ function formatDate(value: string | null): string {
             class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     In progress
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -228,7 +303,9 @@ function formatDate(value: string | null): string {
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     Fulfilled
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -239,7 +316,9 @@ function formatDate(value: string | null): string {
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     Open invoices
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -250,7 +329,9 @@ function formatDate(value: string | null): string {
                 </p>
             </div>
             <div class="surface-panel p-4 transition-shadow hover:shadow-md">
-                <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p
+                    class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                     Sender IDs
                 </p>
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
@@ -268,8 +349,12 @@ function formatDate(value: string | null): string {
             class="grid gap-4 xl:grid-cols-[1.4fr_1fr]"
         >
             <section class="surface-panel overflow-hidden">
-                <div class="flex items-center justify-between gap-3 border-b px-5 py-4">
-                    <h2 class="font-semibold tracking-tight">Recent campaigns</h2>
+                <div
+                    class="flex items-center justify-between gap-3 border-b px-5 py-4"
+                >
+                    <h2 class="font-semibold tracking-tight">
+                        Recent campaigns
+                    </h2>
                     <Link
                         :href="campaignsIndex()"
                         class="text-sm font-medium text-primary underline-offset-4 hover:underline"
@@ -307,7 +392,9 @@ function formatDate(value: string | null): string {
                                         {{ row.name }}
                                     </p>
                                 </td>
-                                <td class="px-5 py-3">{{ row.status_label }}</td>
+                                <td class="px-5 py-3">
+                                    {{ row.status_label }}
+                                </td>
                                 <td class="px-5 py-3 font-mono text-xs">
                                     {{ row.sender_id ?? '—' }}
                                 </td>
@@ -321,7 +408,8 @@ function formatDate(value: string | null): string {
                             </tr>
                             <tr
                                 v-if="
-                                    companyOverview.recent_campaigns.length === 0
+                                    companyOverview.recent_campaigns.length ===
+                                    0
                                 "
                             >
                                 <td
@@ -345,7 +433,9 @@ function formatDate(value: string | null): string {
 
             <div class="grid gap-4">
                 <section class="surface-panel overflow-hidden">
-                    <div class="flex items-center justify-between gap-3 border-b px-5 py-4">
+                    <div
+                        class="flex items-center justify-between gap-3 border-b px-5 py-4"
+                    >
                         <h2 class="font-semibold tracking-tight">Invoices</h2>
                         <Link
                             :href="invoicesIndex()"
@@ -367,7 +457,9 @@ function formatDate(value: string | null): string {
                                 >
                                     {{ invoice.number }}
                                 </Link>
-                                <p class="truncate text-xs text-muted-foreground">
+                                <p
+                                    class="truncate text-xs text-muted-foreground"
+                                >
                                     {{
                                         invoice.campaign_reference ??
                                         'Campaign invoice'
@@ -385,9 +477,7 @@ function formatDate(value: string | null): string {
                             </div>
                         </li>
                         <li
-                            v-if="
-                                companyOverview.recent_invoices.length === 0
-                            "
+                            v-if="companyOverview.recent_invoices.length === 0"
                             class="px-5 py-8 text-center text-sm text-muted-foreground"
                         >
                             No invoices yet.
@@ -396,7 +486,9 @@ function formatDate(value: string | null): string {
                 </section>
 
                 <section class="surface-panel overflow-hidden">
-                    <div class="flex items-center justify-between gap-3 border-b px-5 py-4">
+                    <div
+                        class="flex items-center justify-between gap-3 border-b px-5 py-4"
+                    >
                         <h2 class="font-semibold tracking-tight">Sender IDs</h2>
                         <Link
                             :href="senderIdsIndex()"

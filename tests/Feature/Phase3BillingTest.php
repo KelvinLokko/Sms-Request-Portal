@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
 use App\Models\PaymentTransaction;
+use App\Models\ProviderRate;
 use App\Models\SmsRequest;
 use App\Models\TaxRate;
 use App\Support\PrivateStorage;
@@ -19,6 +20,13 @@ use Illuminate\Support\Facades\URL;
 use Tests\Concerns\CreatesCompanies;
 
 uses(CreatesCompanies::class);
+
+beforeEach(function () {
+    ProviderRate::factory()->create([
+        'rate_per_sms' => '0.020000',
+        'effective_from' => now()->subDay()->toDateString(),
+    ]);
+});
 
 it('applies tax percentages to pesewa subtotals with half-up rounding', function () {
     TaxRate::factory()->create([

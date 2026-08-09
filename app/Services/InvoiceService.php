@@ -20,6 +20,7 @@ class InvoiceService
         private InvoiceNumberGenerator $numbers,
         private ActivityLogger $logger,
         private CampaignNotifier $notifier,
+        private ProviderCostService $providerCosts,
     ) {}
 
     public function issue(SmsRequest $request, User $issuer): Invoice
@@ -112,6 +113,8 @@ class InvoiceService
             }
 
             $beforeStatus = $locked->status->value;
+
+            $this->providerCosts->snapshot($locked, required: true);
 
             $locked->forceFill([
                 'status' => SmsRequestStatus::Invoiced,

@@ -33,6 +33,8 @@ use Illuminate\Support\Str;
  * @property string|null $rate_per_sms
  * @property int|null $estimated_cost_pesewas
  * @property int|null $quoted_cost_pesewas
+ * @property string|null $provider_rate_per_sms
+ * @property int|null $provider_cost_pesewas
  * @property Carbon|null $requested_send_at
  * @property Carbon|null $hard_deadline_at
  * @property Carbon|null $submitted_at
@@ -69,6 +71,8 @@ class SmsRequest extends Model
         'rate_per_sms',
         'estimated_cost_pesewas',
         'quoted_cost_pesewas',
+        'provider_rate_per_sms',
+        'provider_cost_pesewas',
         'requested_send_at',
         'hard_deadline_at',
         'submitted_at',

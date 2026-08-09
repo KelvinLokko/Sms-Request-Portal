@@ -139,6 +139,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::middleware(['permission:rates.manage'])->group(function () {
                 Route::get('rates', [CompanyRateController::class, 'index'])->name('rates.index');
                 Route::post('rates', [CompanyRateController::class, 'store'])->name('rates.store');
+                Route::post('rates/provider', [CompanyRateController::class, 'storeProvider'])
+                    ->name('rates.provider.store');
             });
 
             Route::middleware(['permission:tax-rates.manage'])->group(function () {

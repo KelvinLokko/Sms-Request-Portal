@@ -4,6 +4,7 @@ use App\Enums\PlatformRole;
 use App\Enums\SmsRequestStatus;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\ProviderRate;
 use App\Models\SmsRequest;
 use App\Notifications\CampaignSubmittedNotification;
 use App\Notifications\ChangesRequestedNotification;
@@ -73,6 +74,8 @@ it('notifies company users when an invoice is issued', function () {
     Notification::fake();
     Queue::fake();
 
+    ProviderRate::factory()->create(['rate_per_sms' => '0.020000']);
+
     [$user, $company] = $this->createApprovedCompanyOwner();
     $admin = $this->createPlatformAdmin();
 
@@ -89,7 +92,50 @@ it('notifies company users when an invoice is issued', function () {
     $invoice = app(InvoiceService::class)->issue($campaign, $admin);
 
     Notification::assertSentTo($user, InvoiceReadyNotification::class);
-    expect($invoice->number)->toStartWith('INV-');
+    expect($invoice->number)->toStartWith('INV-')
+        ->and(bccomp((string) $campaign->fresh()->provider_rate_per_sms, '0.020000', 6))->toBe(0)
+        ->and($campaign->fresh()->provider_cost_pesewas)->toBe(200);
+});
+
+it('reports realized profit from client billed minus provider cost', function () {
+    ProviderRate::factory()->create(['rate_per_sms' => '0.020000']);
+
+    [$user, $company] = $this->createApprovedCompanyOwner();
+    $admin = $this->createPlatformAdmin();
+
+    SmsRequest::factory()->submitted()->create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'status' => SmsRequestStatus::Fulfilled,
+        'submitted_at' => now()->subDays(2),
+        'fulfilled_at' => now()->subDay(),
+        'billable_recipients' => 100,
+        'pages' => 1,
+        'quoted_cost_pesewas' => 300,
+        'provider_rate_per_sms' => '0.020000',
+        'provider_cost_pesewas' => 200,
+    ]);
+
+    Invoice::factory()->paid()->create([
+        'company_id' => $company->id,
+        'sms_request_id' => SmsRequest::factory()->submitted()->create([
+            'company_id' => $company->id,
+            'created_by' => $user->id,
+            'status' => SmsRequestStatus::Paid,
+        ])->id,
+        'issued_by' => $admin->id,
+        'total_pesewas' => 300,
+        'subtotal_pesewas' => 300,
+        'paid_at' => now(),
+    ]);
+
+    $summary = app(AnalyticsService::class)->summary();
+
+    expect($summary['billed_sms_pesewas'])->toBe(300)
+        ->and($summary['provider_cost_pesewas'])->toBe(200)
+        ->and($summary['profit_pesewas'])->toBe(100)
+        ->and($summary['is_loss'])->toBeFalse()
+        ->and($summary['margin_percent'])->toBe(33.3);
 });
 
 it('aggregates analytics in SQL for the admin dashboard', function () {

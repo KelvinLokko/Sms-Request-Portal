@@ -17,6 +17,7 @@ class FulfilmentService
     public function __construct(
         private ActivityLogger $logger,
         private CampaignNotifier $notifier,
+        private ProviderCostService $providerCosts,
     ) {}
 
     public function portalCampaignName(SmsRequest $request): string
@@ -77,6 +78,8 @@ class FulfilmentService
                 'fulfilled_at' => $locked->fulfilled_at?->toIso8601String(),
                 'deywuro_job_reference' => $locked->deywuro_job_reference,
             ];
+
+            $this->providerCosts->snapshot($locked, required: true);
 
             $locked->forceFill([
                 'status' => SmsRequestStatus::Fulfilled,

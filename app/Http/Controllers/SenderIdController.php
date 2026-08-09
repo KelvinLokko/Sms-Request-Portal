@@ -79,11 +79,11 @@ class SenderIdController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(): RedirectResponse
     {
         $this->authorize('create', SenderId::class);
 
-        return Inertia::render('sender-ids/Create');
+        return redirect()->route('sender-ids.index');
     }
 
     public function store(StoreSenderIdRequest $request, ActivityLogger $logger): RedirectResponse

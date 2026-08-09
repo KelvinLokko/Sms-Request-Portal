@@ -1,13 +1,26 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import Heading from '@/components/Heading.vue';
-import ListPagination from '@/components/ListPagination.vue';
-import type { Paginated } from '@/types';
+import InputError from '@/components/InputError.vue';
 import ListFilterBar from '@/components/ListFilterBar.vue';
 import type { ListFilterValues } from '@/components/ListFilterBar.vue';
+import ListPagination from '@/components/ListPagination.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { confirmDialog } from '@/composables/useConfirmDialog';
-import { create, destroy, edit, index } from '@/routes/sender-ids';
+import { destroy, edit, index, store } from '@/routes/sender-ids';
+import type { Paginated } from '@/types';
 
 type SenderIdRow = {
     id: number;
@@ -39,6 +52,16 @@ defineOptions({
         breadcrumbs: [{ title: 'Sender IDs', href: index() }],
     },
 });
+
+const createOpen = ref(false);
+
+function openCreate() {
+    createOpen.value = true;
+}
+
+function onCreateSuccess() {
+    createOpen.value = false;
+}
 
 function applyFilters(values: ListFilterValues) {
     router.get(
@@ -83,9 +106,9 @@ async function deleteSenderId(id: number) {
                 title="Sender IDs"
                 description="Register names recipients will see (max 11 characters). Approved and rejected sender IDs are locked."
             />
-            <Button as-child>
-                <Link :href="create()">Register sender ID</Link>
-            </Button>
+            <Button type="button" @click="openCreate"
+                >Register sender ID</Button
+            >
         </div>
 
         <ListFilterBar
@@ -174,5 +197,83 @@ async function deleteSenderId(id: number) {
         </div>
 
         <ListPagination :paginator="senderIds" />
+
+        <Dialog v-model:open="createOpen">
+            <DialogContent class="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Register sender ID</DialogTitle>
+                    <DialogDescription>
+                        Letters, numbers and spaces only — maximum 11
+                        characters.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Form
+                    v-bind="store.form()"
+                    enctype="multipart/form-data"
+                    class="grid gap-4"
+                    :reset-on-success="[
+                        'value',
+                        'document',
+                        'uses_company_letterhead',
+                    ]"
+                    v-slot="{ errors, processing }"
+                    @success="onCreateSuccess"
+                >
+                    <div class="grid gap-2">
+                        <Label for="create_value">Sender ID</Label>
+                        <Input
+                            id="create_value"
+                            name="value"
+                            required
+                            maxlength="11"
+                            placeholder="AcmeGH"
+                            autocomplete="off"
+                        />
+                        <InputError :message="errors.value" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="create_document"
+                            >Supporting document/ID Card</Label
+                        >
+                        <Input
+                            id="create_document"
+                            type="file"
+                            name="document"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        />
+                        <p class="text-xs text-muted-foreground">
+                            PDF, Word or image — max 5 MB.
+                        </p>
+                        <InputError :message="errors.document" />
+                    </div>
+
+                    <label class="flex items-start gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            name="uses_company_letterhead"
+                            value="1"
+                            class="mt-1"
+                        />
+                        <span>Uses company letterhead already on file</span>
+                    </label>
+
+                    <DialogFooter class="gap-2 sm:justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            @click="createOpen = false"
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" :disabled="processing">
+                            <Spinner v-if="processing" />
+                            Submit for review
+                        </Button>
+                    </DialogFooter>
+                </Form>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

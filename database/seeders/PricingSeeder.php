@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\CompanyRate;
+use App\Models\ProviderRate;
 use App\Models\TaxRate;
 use Illuminate\Database\Seeder;
 
@@ -14,6 +15,15 @@ class PricingSeeder extends Seeder
             CompanyRate::query()->create([
                 'company_id' => null,
                 'rate_per_sms' => '0.030000',
+                'effective_from' => now()->toDateString(),
+                'created_by' => null,
+            ]);
+        }
+
+        if (! ProviderRate::query()->exists()) {
+            // Placeholder — replace with the live third-party unit price.
+            ProviderRate::query()->create([
+                'rate_per_sms' => '0.020000',
                 'effective_from' => now()->toDateString(),
                 'created_by' => null,
             ]);

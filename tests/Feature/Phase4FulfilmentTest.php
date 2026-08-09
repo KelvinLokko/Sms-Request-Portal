@@ -4,6 +4,7 @@ use App\Enums\PlatformRole;
 use App\Enums\RecipientListStatus;
 use App\Enums\RecipientRowStatus;
 use App\Enums\SmsRequestStatus;
+use App\Models\ProviderRate;
 use App\Models\RecipientList;
 use App\Models\SmsRecipient;
 use App\Models\SmsRequest;
@@ -14,6 +15,10 @@ uses(CreatesCompanies::class);
 
 beforeEach(function () {
     $this->withoutVite();
+    ProviderRate::factory()->create([
+        'rate_per_sms' => '0.020000',
+        'effective_from' => now()->subDay()->toDateString(),
+    ]);
 });
 
 it('builds the PORTAL campaign naming convention', function () {

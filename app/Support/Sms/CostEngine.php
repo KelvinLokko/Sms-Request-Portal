@@ -48,4 +48,27 @@ final class CostEngine
             'cost_major' => bcdiv((string) $costPesewas, '100', 2),
         ];
     }
+
+    /**
+     * Billable × pages × rate → pesewas (half-up), using an already-known page count.
+     */
+    public static function amountPesewas(int $billableRecipients, int $pages, string $ratePerSms): int
+    {
+        if ($billableRecipients < 0 || $pages < 0) {
+            throw new InvalidArgumentException('Billable recipients and pages cannot be negative.');
+        }
+
+        if (! is_numeric($ratePerSms) || bccomp($ratePerSms, '0', 6) < 0) {
+            throw new InvalidArgumentException('Rate must be a non-negative number.');
+        }
+
+        if ($billableRecipients === 0 || $pages === 0) {
+            return 0;
+        }
+
+        $volume = bcmul((string) $billableRecipients, (string) $pages, 0);
+        $totalMajor = bcmul($volume, $ratePerSms, 6);
+
+        return (int) bcadd(bcmul($totalMajor, '100', 2), '0.5', 0);
+    }
 }

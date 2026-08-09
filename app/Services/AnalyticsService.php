@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\SmsRequestStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\ProviderRate;
 use App\Models\SmsRequest;
 use App\Support\Money;
 use Carbon\CarbonInterface;
@@ -25,6 +26,7 @@ class AnalyticsService
             'summary' => $this->summary(),
             'monthly' => [
                 'revenue' => $this->monthlyRevenue($from, $to),
+                'profit' => $this->monthlyProfit($from, $to),
                 'requests' => $this->monthlyRequestVolume($from, $to),
                 'sms_volume' => $this->monthlySmsVolume($from, $to),
             ],
@@ -38,13 +40,33 @@ class AnalyticsService
     }
 
     /**
-     * @return array<string, int|string|null>
+     * @return array<string, int|string|null|bool>
      */
     public function summary(): array
     {
         $revenuePesewas = (int) Invoice::query()
             ->where('status', InvoiceStatus::Paid)
             ->sum('total_pesewas');
+
+        $billedSmsPesewas = (int) Invoice::query()
+            ->where('status', InvoiceStatus::Paid)
+            ->sum('subtotal_pesewas');
+
+        $providerCostPesewas = (int) SmsRequest::query()
+            ->where('status', SmsRequestStatus::Fulfilled)
+            ->whereNotNull('provider_cost_pesewas')
+            ->sum('provider_cost_pesewas');
+
+        $realized = SmsRequest::query()
+            ->where('status', SmsRequestStatus::Fulfilled)
+            ->whereNotNull('quoted_cost_pesewas')
+            ->whereNotNull('provider_cost_pesewas')
+            ->selectRaw('COALESCE(SUM(quoted_cost_pesewas), 0) as billed, COALESCE(SUM(provider_cost_pesewas), 0) as cost')
+            ->first();
+
+        $realizedBilled = (int) ($realized->billed ?? 0);
+        $realizedCost = (int) ($realized->cost ?? 0);
+        $profitPesewas = $realizedBilled - $realizedCost;
 
         $smsVolume = (int) SmsRequest::query()
             ->whereIn('status', [
@@ -53,6 +75,11 @@ class AnalyticsService
                 SmsRequestStatus::Fulfilled,
             ])
             ->sum(DB::raw('COALESCE(billable_recipients, 0) * COALESCE(pages, 1)'));
+
+        $marginPct = null;
+        if ($realizedBilled > 0) {
+            $marginPct = round(($profitPesewas / $realizedBilled) * 100, 1);
+        }
 
         return [
             'pending_review' => SmsRequest::query()
@@ -71,8 +98,39 @@ class AnalyticsService
             'fulfilled' => SmsRequest::query()->where('status', SmsRequestStatus::Fulfilled)->count(),
             'revenue_pesewas' => $revenuePesewas,
             'revenue' => Money::format($revenuePesewas),
+            'billed_sms_pesewas' => $billedSmsPesewas,
+            'billed_sms' => Money::format($billedSmsPesewas),
+            'provider_cost_pesewas' => $providerCostPesewas,
+            'provider_cost' => Money::format($providerCostPesewas),
+            'profit_pesewas' => $profitPesewas,
+            'profit' => Money::format($profitPesewas),
+            'is_loss' => $profitPesewas < 0,
+            'margin_percent' => $marginPct,
             'sms_volume' => $smsVolume,
+            'provider_rate' => ProviderRate::resolve()?->rate_per_sms,
         ];
+    }
+
+    /**
+     * @return list<array{month: string, label: string, value: int, formatted: string}>
+     */
+    public function monthlyProfit(CarbonInterface $from, CarbonInterface $to): array
+    {
+        $rows = SmsRequest::query()
+            ->selectRaw(
+                "{$this->monthExpression('fulfilled_at')} as month, ".
+                'SUM(COALESCE(quoted_cost_pesewas, 0) - COALESCE(provider_cost_pesewas, 0)) as total'
+            )
+            ->where('status', SmsRequestStatus::Fulfilled)
+            ->whereNotNull('fulfilled_at')
+            ->whereNotNull('quoted_cost_pesewas')
+            ->whereNotNull('provider_cost_pesewas')
+            ->whereBetween('fulfilled_at', [$from, $to])
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        return $this->fillMonths($from, $to, $rows->all(), fn (int $v) => Money::format($v));
     }
 
     /**

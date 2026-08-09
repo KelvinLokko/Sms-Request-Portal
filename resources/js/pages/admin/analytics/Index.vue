@@ -42,10 +42,17 @@ const props = defineProps<{
         pending_payments: number;
         fulfilled: number;
         revenue: string;
+        billed_sms: string;
+        provider_cost: string;
+        profit: string;
+        is_loss: boolean;
+        margin_percent: number | null;
+        provider_rate: string | null;
         sms_volume: number;
     };
     monthly: {
         revenue: SeriesPoint[];
+        profit: SeriesPoint[];
         requests: SeriesPoint[];
         sms_volume: SeriesPoint[];
     };
@@ -61,6 +68,7 @@ defineOptions({
 });
 
 const revenueCanvas = ref<HTMLCanvasElement | null>(null);
+const profitCanvas = ref<HTMLCanvasElement | null>(null);
 const requestsCanvas = ref<HTMLCanvasElement | null>(null);
 const smsCanvas = ref<HTMLCanvasElement | null>(null);
 const growthCanvas = ref<HTMLCanvasElement | null>(null);
@@ -88,6 +96,28 @@ function buildCharts() {
                                 (r) => r.value ?? 0,
                             ),
                             backgroundColor: 'rgba(15, 118, 110, 0.7)',
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                },
+            }),
+        );
+    }
+
+    if (profitCanvas.value) {
+        charts.push(
+            new Chart(profitCanvas.value, {
+                type: 'bar',
+                data: {
+                    labels: props.monthly.profit.map((r) => r.label),
+                    datasets: [
+                        {
+                            label: 'Profit (pesewas)',
+                            data: props.monthly.profit.map((r) => r.value ?? 0),
+                            backgroundColor: 'rgba(22, 163, 74, 0.7)',
                         },
                     ],
                 },
@@ -184,7 +214,7 @@ onBeforeUnmount(destroyCharts);
             :description="`Live database totals from ${range.from} to ${range.to} (invoices, campaigns, and payments — not demo charts).`"
         />
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <div class="rounded-xl border p-4">
                 <p class="text-xs text-muted-foreground">Pending review</p>
                 <p class="mt-1 text-2xl font-medium">
@@ -208,8 +238,35 @@ onBeforeUnmount(destroyCharts);
                 <p class="mt-1 text-2xl font-medium">{{ summary.fulfilled }}</p>
             </div>
             <div class="rounded-xl border p-4">
-                <p class="text-xs text-muted-foreground">Paid revenue</p>
-                <p class="mt-1 text-2xl font-medium">{{ summary.revenue }}</p>
+                <p class="text-xs text-muted-foreground">Client SMS billed</p>
+                <p class="mt-1 text-2xl font-medium">
+                    {{ summary.billed_sms }}
+                </p>
+            </div>
+            <div class="rounded-xl border p-4">
+                <p class="text-xs text-muted-foreground">Provider cost</p>
+                <p class="mt-1 text-2xl font-medium">
+                    {{ summary.provider_cost }}
+                </p>
+            </div>
+            <div class="rounded-xl border p-4">
+                <p class="text-xs text-muted-foreground">Realized profit</p>
+                <p
+                    class="mt-1 text-2xl font-medium"
+                    :class="
+                        summary.is_loss
+                            ? 'text-destructive'
+                            : 'text-emerald-700 dark:text-emerald-400'
+                    "
+                >
+                    {{ summary.profit }}
+                </p>
+                <p
+                    v-if="summary.margin_percent !== null"
+                    class="mt-1 text-xs text-muted-foreground"
+                >
+                    {{ summary.margin_percent }}% margin
+                </p>
             </div>
             <div class="rounded-xl border p-4">
                 <p class="text-xs text-muted-foreground">Avg turnaround</p>
@@ -225,11 +282,17 @@ onBeforeUnmount(destroyCharts);
 
         <div class="grid gap-6 lg:grid-cols-2">
             <section class="rounded-xl border p-4">
-                <h2 class="mb-3 text-sm font-medium">Monthly revenue</h2>
+                <h2 class="mb-3 text-sm font-medium">Monthly paid revenue</h2>
                 <canvas
                     ref="revenueCanvas"
                     aria-label="Monthly revenue chart"
                 />
+            </section>
+            <section class="rounded-xl border p-4">
+                <h2 class="mb-3 text-sm font-medium">
+                    Monthly realized profit
+                </h2>
+                <canvas ref="profitCanvas" aria-label="Monthly profit chart" />
             </section>
             <section class="rounded-xl border p-4">
                 <h2 class="mb-3 text-sm font-medium">Request volume</h2>
@@ -242,7 +305,7 @@ onBeforeUnmount(destroyCharts);
                 <h2 class="mb-3 text-sm font-medium">SMS volume</h2>
                 <canvas ref="smsCanvas" aria-label="SMS volume chart" />
             </section>
-            <section class="rounded-xl border p-4">
+            <section class="rounded-xl border p-4 lg:col-span-2">
                 <h2 class="mb-3 text-sm font-medium">Monthly growth</h2>
                 <canvas ref="growthCanvas" aria-label="Growth chart" />
             </section>
