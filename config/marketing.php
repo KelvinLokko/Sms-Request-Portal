@@ -7,7 +7,7 @@ return [
     | Public marketing site
     |--------------------------------------------------------------------------
     |
-    | Placeholder copy until real brand details are supplied. Rates stay private.
+    | Placeholder copy until real brand details are supplied.
     |
     */
 

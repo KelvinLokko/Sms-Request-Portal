@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CompanyRate;
 use App\Models\User;
 
 it('renders the public marketing landing page as blade html', function () {
@@ -24,13 +25,20 @@ it('includes skip link and landmark structure for accessibility', function () {
         ->assertSee('aria-label="Primary"', false);
 });
 
-it('does not publish rates on the landing page', function () {
+it('shows a pricing calculator using the platform default rate', function () {
+    CompanyRate::factory()->create([
+        'company_id' => null,
+        'rate_per_sms' => '0.030000',
+        'effective_from' => now()->subDay()->toDateString(),
+    ]);
+
     $response = $this->get(route('home'));
 
     $response->assertOk()
-        ->assertSee('Rates are negotiated per client', false)
-        ->assertDontSee('GHS / SMS', false)
-        ->assertDontSee('rate_per_sms', false);
+        ->assertSee('Estimate your campaign cost', false)
+        ->assertSee('data-pricing-calculator', false)
+        ->assertSee('data-rate="0.030000"', false)
+        ->assertSee('GHS / page', false);
 });
 
 it('points every public call to action at registration for guests', function () {

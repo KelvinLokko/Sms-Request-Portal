@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Marketing;
 
 use App\Http\Controllers\Controller;
+use App\Models\CompanyRate;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
@@ -10,7 +11,13 @@ class HomeController extends Controller
 {
     public function __invoke(): View
     {
-        return view('marketing.home');
+        $platformRate = CompanyRate::resolveFor(null);
+
+        return view('marketing.home', [
+            'platformRatePerSms' => $platformRate !== null
+                ? number_format((float) $platformRate->rate_per_sms, 6, '.', '')
+                : null,
+        ]);
     }
 
     public function robots(): Response

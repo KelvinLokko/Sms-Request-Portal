@@ -139,7 +139,73 @@ function closeMobileMenuOnNavigate(): void {
     });
 }
 
+function pricingCalculator(): void {
+    const root = document.querySelector<HTMLElement>(
+        '[data-pricing-calculator]',
+    );
+
+    if (!root) {
+        return;
+    }
+
+    const rate = Number(root.dataset.rate ?? '');
+
+    if (!Number.isFinite(rate) || rate < 0) {
+        return;
+    }
+
+    const recipientsInput = root.querySelector<HTMLInputElement>(
+        '[data-pricing-recipients]',
+    );
+    const pagesInput = root.querySelector<HTMLInputElement>(
+        '[data-pricing-pages]',
+    );
+    const volumeEl = root.querySelector<HTMLElement>('[data-pricing-volume]');
+    const totalEl = root.querySelector<HTMLElement>('[data-pricing-total]');
+
+    if (!recipientsInput || !pagesInput || !volumeEl || !totalEl) {
+        return;
+    }
+
+    const formatMoney = (pesewas: number): string => {
+        const major = (pesewas / 100).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+        return `GHS ${major}`;
+    };
+
+    const update = () => {
+        const recipients = Math.max(
+            0,
+            Math.floor(Number(recipientsInput.value) || 0),
+        );
+        const pages = Math.min(
+            10,
+            Math.max(1, Math.floor(Number(pagesInput.value) || 1)),
+        );
+
+        if (String(pagesInput.value) !== String(pages)) {
+            pagesInput.value = String(pages);
+        }
+
+        const volume = recipients * pages;
+        // Half-up to pesewas, matching CostEngine::amountPesewas for positive totals.
+        const pesewas =
+            recipients === 0 ? 0 : Math.floor(volume * rate * 100 + 0.5);
+
+        volumeEl.textContent = volume.toLocaleString();
+        totalEl.textContent = formatMoney(pesewas);
+    };
+
+    recipientsInput.addEventListener('input', update);
+    pagesInput.addEventListener('input', update);
+    update();
+}
+
 revealOnScroll();
 animateCounters();
 stickyHeader();
 closeMobileMenuOnNavigate();
+pricingCalculator();

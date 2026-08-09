@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import CompanyRateController from '@/actions/App/Http/Controllers/Admin/CompanyRateController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import ListPagination from '@/components/ListPagination.vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,7 +27,7 @@ type ProviderRateRow = {
     effective_from: string;
 };
 
-defineProps<{
+const props = defineProps<{
     rates: Paginated<RateRow>;
     providerRates: Paginated<ProviderRateRow>;
     currentProviderRate: string | null;
@@ -40,6 +42,15 @@ defineOptions({
 });
 
 const today = new Date().toISOString().slice(0, 10);
+const selectedCompanyId = ref('');
+
+const companyOptions = computed(() => [
+    { value: '', label: 'Platform default' },
+    ...props.companies.map((company) => ({
+        value: String(company.id),
+        label: company.name,
+    })),
+]);
 </script>
 
 <template>
@@ -265,20 +276,15 @@ const today = new Date().toISOString().slice(0, 10);
 
                     <div class="grid gap-2">
                         <Label for="company_id">Company</Label>
-                        <select
+                        <SearchableSelect
                             id="company_id"
                             name="company_id"
-                            class="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                        >
-                            <option value="">Platform default</option>
-                            <option
-                                v-for="company in companies"
-                                :key="company.id"
-                                :value="company.id"
-                            >
-                                {{ company.name }}
-                            </option>
-                        </select>
+                            v-model="selectedCompanyId"
+                            :options="companyOptions"
+                            placeholder="Platform default"
+                            search-placeholder="Search companies…"
+                            empty-text="No matching company."
+                        />
                         <InputError :message="errors.company_id" />
                     </div>
 

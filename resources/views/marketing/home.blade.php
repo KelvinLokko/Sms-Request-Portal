@@ -25,6 +25,7 @@
     @php
         $navLinks = [
             ['href' => '#how-it-works', 'label' => 'How it works'],
+            ['href' => '#pricing', 'label' => 'Pricing'],
             ['href' => '#services', 'label' => 'Services'],
             ['href' => '#benefits', 'label' => 'Why us'],
             ['href' => '#faq', 'label' => 'FAQ'],
@@ -147,7 +148,7 @@
             ],
             [
                 'question' => 'How is the cost calculated?',
-                'answer' => 'We count message segments, multiply by the number of billable recipients after cleaning, and apply the rate negotiated for your company. The quote is produced server-side before you are invoiced.',
+                'answer' => 'Billable recipients × message pages × your company rate. Use the pricing calculator for a starting estimate with the platform default rate. After signup, your negotiated rate (if different) is applied server-side when we quote and invoice.',
             ],
             [
                 'question' => 'How long does approval take?',
@@ -570,8 +571,148 @@
             </div>
         </section>
 
+        {{-- Pricing calculator --}}
+        <section id="pricing" class="scroll-mt-24 bg-mist" aria-labelledby="pricing-heading">
+            <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+                <div class="grid gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
+                    <div data-reveal>
+                        <p class="eyebrow">Pricing</p>
+                        <h2 id="pricing-heading" class="section-title mt-4 text-ink">
+                            Estimate your campaign cost
+                        </h2>
+                        <p class="mt-4 max-w-xl text-muted-foreground">
+                            Cost is
+                            <span class="font-medium text-ink">recipients × pages × rate</span>.
+                            This calculator uses the current platform default rate so you can size a send before you create an account.
+                        </p>
+                        <ul class="mt-6 space-y-3 text-sm text-muted-foreground">
+                            <li class="flex gap-3">
+                                <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-signal/30 text-ink" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" class="size-3.5"><path d="m5 12 5 5 9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <span>One SMS page is about 160 characters (GSM). Longer messages use more pages.</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-signal/30 text-ink" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" class="size-3.5"><path d="m5 12 5 5 9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <span>Final quotes use billable recipients after list cleaning, and your company rate if negotiated.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div
+                        class="rounded-[1.75rem] border border-border bg-surface p-6 shadow-sm sm:p-8"
+                        data-reveal
+                        data-reveal-delay="120"
+                        data-pricing-calculator
+                        @if ($platformRatePerSms)
+                            data-rate="{{ $platformRatePerSms }}"
+                        @endif
+                    >
+                        @if ($platformRatePerSms)
+                            <div class="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
+                                <div>
+                                    <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                        Platform rate
+                                    </p>
+                                    <p class="mt-1 font-mono text-2xl font-semibold text-ink">
+                                        {{ rtrim(rtrim($platformRatePerSms, '0'), '.') }}
+                                        <span class="text-sm font-normal text-muted-foreground">GHS / page</span>
+                                    </p>
+                                </div>
+                                <p class="text-xs text-muted-foreground">Indicative estimate</p>
+                            </div>
+
+                            <form class="mt-6 grid gap-5" data-pricing-form onsubmit="return false;">
+                                <div class="grid gap-2">
+                                    <label for="pricing-recipients" class="text-sm font-medium text-ink">
+                                        Number of recipients
+                                    </label>
+                                    <input
+                                        id="pricing-recipients"
+                                        type="number"
+                                        inputmode="numeric"
+                                        min="1"
+                                        step="1"
+                                        value="1000"
+                                        class="h-11 rounded-xl border border-border bg-mist px-3 text-base text-ink outline-none transition focus:border-signal-strong focus:ring-2 focus:ring-signal/40"
+                                        data-pricing-recipients
+                                    />
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <label for="pricing-pages" class="text-sm font-medium text-ink">
+                                        Message pages
+                                    </label>
+                                    <input
+                                        id="pricing-pages"
+                                        type="number"
+                                        inputmode="numeric"
+                                        min="1"
+                                        max="10"
+                                        step="1"
+                                        value="1"
+                                        class="h-11 rounded-xl border border-border bg-mist px-3 text-base text-ink outline-none transition focus:border-signal-strong focus:ring-2 focus:ring-signal/40"
+                                        data-pricing-pages
+                                    />
+                                    <p class="text-xs text-muted-foreground">
+                                        Most short messages are 1 page. Increase if your text is longer.
+                                    </p>
+                                </div>
+                            </form>
+
+                            <dl class="mt-6 grid gap-3 rounded-2xl bg-mist p-4 text-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <dt class="text-muted-foreground">SMS volume</dt>
+                                    <dd class="font-mono font-medium text-ink" data-pricing-volume>1,000</dd>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 border-t border-border pt-3">
+                                    <dt class="text-muted-foreground">Estimated cost</dt>
+                                    <dd class="font-mono text-xl font-semibold text-ink" data-pricing-total>
+                                        GHS 0.00
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <p class="mt-4 text-xs leading-relaxed text-muted-foreground" data-pricing-note>
+                                Estimate only. Your firm quote is confirmed in the portal after list validation.
+                            </p>
+
+                            <div class="mt-6">
+                                @auth
+                                    <a href="{{ route('dashboard') }}" class="btn-lime w-full justify-center">
+                                        Go to dashboard
+                                    </a>
+                                @else
+                                    <a href="{{ route('register') }}" class="btn-lime w-full justify-center">
+                                        Create an account
+                                        <span aria-hidden="true">→</span>
+                                    </a>
+                                @endauth
+                            </div>
+                        @else
+                            <p class="text-ink">
+                                Pricing is available after we publish the platform rate. Create an account and our team will confirm your quote.
+                            </p>
+                            <div class="mt-6">
+                                @auth
+                                    <a href="{{ route('dashboard') }}" class="btn-lime w-full justify-center">Go to dashboard</a>
+                                @else
+                                    <a href="{{ route('register') }}" class="btn-lime w-full justify-center">
+                                        Create an account
+                                        <span aria-hidden="true">→</span>
+                                    </a>
+                                @endauth
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </section>
+
         {{-- Benefits --}}
-        <section id="benefits" class="scroll-mt-24 bg-mist" aria-labelledby="benefits-heading">
+        <section id="benefits" class="scroll-mt-24 bg-surface" aria-labelledby="benefits-heading">
             <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
                 <div class="max-w-2xl" data-reveal>
                     <p class="eyebrow">Why us</p>
@@ -579,7 +720,7 @@
                         Built around what actually matters
                     </h2>
                     <p class="mt-4 text-muted-foreground">
-                        Rates are negotiated per client — no public price list. The portal keeps the paperwork and lists tidy.
+                        Start from the published platform rate, then negotiate a company rate if you need volume pricing. The portal keeps quotes, invoices, and lists tidy.
                     </p>
                 </div>
 
@@ -606,7 +747,7 @@
         </section>
 
         {{-- Testimonials --}}
-        <section class="bg-surface" aria-labelledby="testimonials-heading">
+        <section class="bg-mist" aria-labelledby="testimonials-heading">
             <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
                 <div class="max-w-2xl" data-reveal>
                     <p class="eyebrow">Client feedback</p>
