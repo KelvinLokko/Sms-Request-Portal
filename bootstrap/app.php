@@ -16,8 +16,10 @@ use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        apiPrefix: 'api',
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Trust reverse proxies (ngrok, load balancers) so HTTPS and host are detected correctly.
@@ -26,6 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->append(SecurityHeaders::class);
+
+        $middleware->validateCsrfTokens(except: [
+            'api/v1/payments/webhook/paystack',
+            'api/v1/payments/webhook/paystack/',
+        ]);
 
         $middleware->web(append: [
             HandleAppearance::class,

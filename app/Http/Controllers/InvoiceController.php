@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Contracts\PaymentProvider;
 use App\Enums\InvoiceStatus;
-use App\Http\Requests\Payments\StorePaymentRequest;
 use App\Models\Invoice;
 use App\Services\InvoicePdfService;
+use App\Services\Payments\PaystackCheckout;
 use App\Support\ListFilters;
 use App\Support\Money;
 use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -74,7 +73,7 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function show(Invoice $invoice): Response
+    public function show(Invoice $invoice, PaystackCheckout $paystack): Response
     {
         $this->authorize('view', $invoice);
 
@@ -84,6 +83,9 @@ class InvoiceController extends Controller
             'payments' => fn ($q) => $q->latest(),
             'payments.submitter:id,name',
         ]);
+
+        $pendingPaystack = $invoice->payments
+            ->first(fn ($payment) => $payment->status->value === 'pending' && $payment->provider === 'paystack');
 
         return Inertia::render('invoices/Show', [
             'invoice' => [
@@ -100,16 +102,19 @@ class InvoiceController extends Controller
                 ])->all(),
                 'payments' => $invoice->payments->map(fn ($payment) => [
                     'id' => $payment->id,
+                    'provider' => $payment->provider,
                     'status' => $payment->status->value,
                     'status_label' => $payment->status->label(),
                     'amount' => Money::format($payment->amount_pesewas),
-                    'momo_reference' => $payment->momo_reference,
-                    'payer_number' => $payment->payer_number,
+                    'reference' => $payment->provider_reference ?: $payment->momo_reference,
+                    'payer' => $payment->payer_number,
                     'rejection_reason' => $payment->rejection_reason,
                     'created_at' => $payment->created_at?->toIso8601String(),
                 ])->all(),
                 'pdf_url' => $this->pdfUrl($invoice),
             ],
+            'paystackEnabled' => $paystack->enabled(),
+            'hasPendingPayment' => $pendingPaystack !== null,
             'can' => [
                 'pay' => request()->user()?->can('pay', $invoice) ?? false,
                 'download' => request()->user()?->can('download', $invoice) ?? false,
@@ -132,31 +137,43 @@ class InvoiceController extends Controller
         );
     }
 
-    public function storePayment(
-        StorePaymentRequest $request,
+    public function startPaystack(
         Invoice $invoice,
-        PaymentProvider $provider,
+        PaystackCheckout $checkout,
     ): RedirectResponse {
-        $proofPath = null;
-        if ($request->hasFile('proof')) {
-            $file = $request->file('proof');
-            $proofPath = $file->storeAs(
-                'payment-proofs/'.$invoice->company_id.'/'.$invoice->id,
-                Str::uuid()->toString().'.'.$file->getClientOriginalExtension(),
-                PrivateStorage::name(),
-            );
+        $this->authorize('pay', $invoice);
+
+        $url = $checkout->start($invoice, request()->user());
+
+        return redirect()->away($url);
+    }
+
+    public function paystackCallback(
+        Request $request,
+        Invoice $invoice,
+        PaystackCheckout $checkout,
+    ): RedirectResponse {
+        $this->authorize('view', $invoice);
+
+        $reference = (string) $request->query('reference', '');
+
+        if ($reference === '') {
+            return redirect()
+                ->route('invoices.show', $invoice)
+                ->with('error', 'Payment reference missing. If you paid, wait a moment and refresh.');
         }
 
-        $provider->submit($invoice, $request->user(), [
-            'amount_pesewas' => Money::fromMajor($request->validated('amount')),
-            'momo_reference' => $request->validated('momo_reference'),
-            'payer_number' => $request->validated('payer_number'),
-            'proof_path' => $proofPath,
-        ]);
+        try {
+            $checkout->confirmByReference($reference);
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('invoices.show', $invoice)
+                ->with('error', collect($e->errors())->flatten()->first() ?: 'Payment could not be confirmed yet.');
+        }
 
         return redirect()
             ->route('invoices.show', $invoice)
-            ->with('success', 'Payment submitted for verification.');
+            ->with('success', 'Payment confirmed. Thank you.');
     }
 
     /**

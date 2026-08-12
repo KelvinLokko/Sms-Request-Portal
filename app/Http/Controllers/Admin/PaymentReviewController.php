@@ -69,6 +69,7 @@ class PaymentReviewController extends Controller
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($inner) use ($search): void {
                     $inner->where('momo_reference', 'like', "%{$search}%")
+                        ->orWhere('provider_reference', 'like', "%{$search}%")
                         ->orWhere('payer_number', 'like', "%{$search}%")
                         ->orWhereHas('company', fn ($c) => $c->where('name', 'like', "%{$search}%"))
                         ->orWhereHas('invoice', fn ($i) => $i->where('number', 'like', "%{$search}%"));
@@ -108,8 +109,9 @@ class PaymentReviewController extends Controller
             'id' => $payment->id,
             'status' => $payment->status->value,
             'status_label' => $payment->status->label(),
+            'provider' => $payment->provider,
             'amount' => Money::format($payment->amount_pesewas),
-            'momo_reference' => $payment->momo_reference,
+            'momo_reference' => $payment->provider_reference ?: $payment->momo_reference,
             'payer_number' => $payment->payer_number,
             'company' => [
                 'id' => $payment->company->id,

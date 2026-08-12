@@ -66,9 +66,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])
         ->middleware(['signed', 'throttle:downloads'])
         ->name('invoices.pdf');
-    Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'storePayment'])
+    Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'startPaystack'])
         ->middleware(['company.approved', 'throttle:uploads'])
-        ->name('invoices.payments.store');
+        ->name('invoices.pay');
+    Route::get('invoices/{invoice}/payments/callback', [InvoiceController::class, 'paystackCallback'])
+        ->middleware(['company.approved'])
+        ->name('invoices.payments.callback');
 
     Route::middleware(['permission:admin.access'])
         ->prefix('admin')

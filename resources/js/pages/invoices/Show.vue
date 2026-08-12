@@ -4,8 +4,6 @@ import InvoiceController from '@/actions/App/Http/Controllers/InvoiceController'
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { index } from '@/routes/invoices';
 
@@ -30,18 +28,21 @@ type Invoice = {
     }[];
     payments: {
         id: number;
+        provider: string;
         status: string;
         status_label: string;
         amount: string;
-        momo_reference: string;
-        payer_number: string;
+        reference: string | null;
+        payer: string | null;
         rejection_reason: string | null;
         created_at: string | null;
     }[];
 };
 
-const props = defineProps<{
+defineProps<{
     invoice: Invoice;
+    paystackEnabled: boolean;
+    hasPendingPayment: boolean;
     can: { pay: boolean; download: boolean };
 }>();
 
@@ -124,8 +125,13 @@ defineOptions({
                         <span>{{ payment.amount }}</span>
                     </div>
                     <div class="mt-1 text-muted-foreground">
-                        Ref {{ payment.momo_reference }} ·
-                        {{ payment.payer_number }}
+                        <span class="capitalize">{{ payment.provider }}</span>
+                        <template v-if="payment.reference">
+                            · Ref {{ payment.reference }}
+                        </template>
+                        <template v-if="payment.payer">
+                            · {{ payment.payer }}
+                        </template>
                     </div>
                     <p
                         v-if="payment.rejection_reason"
@@ -138,64 +144,38 @@ defineOptions({
         </section>
 
         <section v-if="can.pay" class="space-y-4 rounded-xl border p-4">
-            <h2 class="text-sm font-medium">Submit Mobile Money payment</h2>
+            <h2 class="text-sm font-medium">Pay invoice</h2>
             <p class="text-sm text-muted-foreground">
-                Pay {{ invoice.total }} offline, then enter the MoMo reference
-                here for finance to verify.
+                Pay {{ invoice.total }} securely with Paystack (card or mobile
+                money). You will be redirected to complete checkout, then
+                returned here.
             </p>
+
+            <p
+                v-if="!paystackEnabled"
+                class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100"
+            >
+                Online payment is not configured yet. Contact support.
+            </p>
+
             <Form
-                v-bind="InvoiceController.storePayment.form(invoice.id)"
-                enctype="multipart/form-data"
-                class="space-y-4"
+                v-else
+                v-bind="InvoiceController.startPaystack.form(invoice.id)"
+                class="space-y-3"
                 v-slot="{ errors, processing }"
             >
-                <div class="space-y-2">
-                    <Label for="amount">Amount (GHS)</Label>
-                    <Input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        :default-value="invoice.total_major"
-                        required
-                    />
-                    <InputError :message="errors.amount" />
-                </div>
-                <div class="space-y-2">
-                    <Label for="momo_reference">MoMo reference</Label>
-                    <Input
-                        id="momo_reference"
-                        name="momo_reference"
-                        required
-                        maxlength="100"
-                    />
-                    <InputError :message="errors.momo_reference" />
-                </div>
-                <div class="space-y-2">
-                    <Label for="payer_number">Payer number</Label>
-                    <Input
-                        id="payer_number"
-                        name="payer_number"
-                        required
-                        maxlength="32"
-                        placeholder="23324…"
-                    />
-                    <InputError :message="errors.payer_number" />
-                </div>
-                <div class="space-y-2">
-                    <Label for="proof">Proof of payment</Label>
-                    <Input
-                        id="proof"
-                        name="proof"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                    <InputError :message="errors.proof" />
-                </div>
+                <InputError
+                    :message="
+                        errors.payment || errors.invoice || errors.reference
+                    "
+                />
                 <Button type="submit" :disabled="processing">
                     <Spinner v-if="processing" />
-                    Submit payment
+                    {{
+                        hasPendingPayment
+                            ? 'Continue to Paystack'
+                            : 'Pay with Paystack'
+                    }}
                 </Button>
             </Form>
         </section>

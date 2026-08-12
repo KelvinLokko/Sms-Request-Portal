@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property string $provider
  * @property PaymentStatus $status
  * @property int $amount_pesewas
+ * @property string|null $provider_reference
+ * @property string|null $authorization_url
  * @property string $momo_reference
  * @property string $payer_number
  * @property string|null $proof_path
@@ -38,6 +40,8 @@ class Payment extends Model
         'invoice_id',
         'company_id',
         'provider',
+        'provider_reference',
+        'authorization_url',
         'status',
         'amount_pesewas',
         'momo_reference',

@@ -15,6 +15,7 @@ use App\Models\SmsRequest;
 use App\Models\TaxRate;
 use App\Support\PrivateStorage;
 use App\Support\TaxCalculator;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
 use Tests\Concerns\CreatesCompanies;
@@ -119,7 +120,13 @@ it('lets support request changes and reject with a reason', function () {
         ->and($campaign2->fresh()->rejection_reason)->toBe('Content not permitted.');
 });
 
-it('issues an invoice, accepts MoMo payment, and verifies it', function () {
+it('issues an invoice, accepts Paystack payment, and settles via webhook', function () {
+    config([
+        'services.paystack.secret_key' => 'sk_test_secret',
+        'services.paystack.public_key' => 'pk_test_public',
+        'services.paystack.base_url' => 'https://api.paystack.co',
+    ]);
+
     CompanyRate::factory()->create(['rate_per_sms' => '0.030000']);
     TaxRate::factory()->create([
         'name' => 'Service levy',
@@ -144,6 +151,18 @@ it('issues an invoice, accepts MoMo payment, and verifies it', function () {
 
     Queue::fake();
 
+    Http::fake([
+        'api.paystack.co/transaction/initialize' => Http::response([
+            'status' => true,
+            'message' => 'Authorization URL created',
+            'data' => [
+                'authorization_url' => 'https://checkout.paystack.com/test-checkout',
+                'access_code' => 'access_test',
+                'reference' => 'inv_test_ref_001',
+            ],
+        ]),
+    ]);
+
     $this->actingAs($admin)
         ->post(route('admin.campaigns.start-review', $campaign))
         ->assertRedirect();
@@ -165,27 +184,73 @@ it('issues an invoice, accepts MoMo payment, and verifies it', function () {
     Queue::assertPushed(GenerateInvoicePdfJob::class);
 
     $this->actingAs($user)
-        ->post(route('invoices.payments.store', $invoice), [
-            'amount' => '3.00',
-            'momo_reference' => 'MOMO12345678',
-            'payer_number' => '233244304528',
-        ])
-        ->assertRedirect(route('invoices.show', $invoice));
+        ->post(route('invoices.pay', $invoice))
+        ->assertRedirect('https://checkout.paystack.com/test-checkout');
 
     $payment = Payment::query()->where('invoice_id', $invoice->id)->first();
 
     expect($payment)->not->toBeNull()
+        ->and($payment->provider)->toBe('paystack')
         ->and($payment->status)->toBe(PaymentStatus::Pending)
+        ->and($payment->provider_reference)->toBe('inv_test_ref_001')
         ->and(PaymentTransaction::query()->where('payment_id', $payment->id)->count())->toBe(1);
 
-    $this->actingAs($finance)
-        ->post(route('admin.payments.verify', $payment))
-        ->assertRedirect();
+    $payload = json_encode([
+        'event' => 'charge.success',
+        'data' => [
+            'id' => 123456,
+            'status' => 'success',
+            'reference' => 'inv_test_ref_001',
+            'amount' => 300,
+            'currency' => 'GHS',
+            'channel' => 'mobile_money',
+            'gateway_response' => 'Successful',
+            'paid_at' => now()->toIso8601String(),
+            'customer' => ['email' => $user->email],
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    $signature = hash_hmac('sha512', $payload, 'sk_test_secret');
+
+    $this->call(
+        'POST',
+        route('api.payments.webhook.paystack'),
+        [],
+        [],
+        [],
+        [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_PAYSTACK_SIGNATURE' => $signature,
+        ],
+        $payload,
+    )->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Verified)
         ->and($invoice->fresh()->status)->toBe(InvoiceStatus::Paid)
         ->and($campaign->fresh()->status)->toBe(SmsRequestStatus::Paid)
         ->and(PaymentTransaction::query()->where('payment_id', $payment->id)->count())->toBe(2);
+});
+
+it('rejects Paystack webhooks with an invalid signature', function () {
+    config(['services.paystack.secret_key' => 'sk_test_secret']);
+
+    $payload = json_encode([
+        'event' => 'charge.success',
+        'data' => ['reference' => 'x', 'status' => 'success', 'amount' => 1],
+    ], JSON_THROW_ON_ERROR);
+
+    $this->call(
+        'POST',
+        route('api.payments.webhook.paystack'),
+        [],
+        [],
+        [],
+        [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_PAYSTACK_SIGNATURE' => 'invalid',
+        ],
+        $payload,
+    )->assertStatus(400);
 });
 
 it('forbids support from issuing invoices', function () {
