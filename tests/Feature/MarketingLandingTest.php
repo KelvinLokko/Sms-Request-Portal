@@ -58,6 +58,14 @@ it('shows dashboard links instead of register when authenticated', function () {
         ->assertSee('Go to dashboard', false);
 });
 
+it('includes google site verification meta when configured', function () {
+    config(['marketing.google_site_verification' => 'test-google-token']);
+
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee('<meta name="google-site-verification" content="test-google-token">', false);
+});
+
 it('serves robots.txt with sitemap and private path disallow rules', function () {
     $response = $this->get(route('robots'));
 

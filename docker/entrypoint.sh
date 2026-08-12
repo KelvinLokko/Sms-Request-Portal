@@ -10,10 +10,12 @@ mkdir -p \
     storage/framework/views \
     storage/logs \
     storage/app/public \
+    storage/app/private \
     bootstrap/cache
 
 if [ "$(id -u)" = "0" ]; then
     chown -R www-data:www-data storage bootstrap/cache || true
+    chmod -R ug+rwx storage bootstrap/cache || true
 fi
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then

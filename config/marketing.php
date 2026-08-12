@@ -28,4 +28,12 @@ return [
         'phone' => env('MARKETING_CONTACT_PHONE', ''),
     ],
 
+    /*
+    | Google Search Console HTML-tag verification.
+    | In Search Console choose "HTML tag", then set the content value here.
+    */
+    'google_site_verification' => env('GOOGLE_SITE_VERIFICATION'),
+
+    'og_image' => env('MARKETING_OG_IMAGE', '/images/logo.png'),
+
 ];

@@ -11,6 +11,7 @@
             '@type' => 'Organization',
             'name' => config('marketing.brand'),
             'url' => url('/'),
+            'logo' => url('/images/logo.png'),
             'description' => config('marketing.description'),
             'email' => config('marketing.contact.email'),
             'telephone' => config('marketing.contact.phone') ?: null,
@@ -18,6 +19,26 @@
     @endphp
     <script type="application/ld+json">
         {!! json_encode($organization, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+    </script>
+    @php
+        $website = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => config('marketing.brand'),
+            'url' => url('/'),
+            'description' => config('marketing.description'),
+            'publisher' => [
+                '@type' => 'Organization',
+                'name' => config('marketing.brand'),
+                'logo' => [
+                    '@type' => 'ImageObject',
+                    'url' => url('/images/logo.png'),
+                ],
+            ],
+        ];
+    @endphp
+    <script type="application/ld+json">
+        {!! json_encode($website, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
     </script>
 @endpush
 
