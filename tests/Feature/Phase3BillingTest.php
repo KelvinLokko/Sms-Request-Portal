@@ -253,6 +253,69 @@ it('rejects Paystack webhooks with an invalid signature', function () {
     )->assertStatus(400);
 });
 
+it('restarts a pending Paystack checkout with a fresh reference', function () {
+    config([
+        'services.paystack.secret_key' => 'sk_test_secret',
+        'services.paystack.public_key' => 'pk_test_public',
+        'services.paystack.base_url' => 'https://api.paystack.co',
+    ]);
+
+    [$user, $company] = $this->createApprovedCompanyOwner();
+    $finance = $this->createPlatformAdmin(PlatformRole::Finance);
+
+    $campaign = SmsRequest::factory()->submitted()->create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'status' => SmsRequestStatus::Invoiced,
+    ]);
+
+    $invoice = Invoice::factory()->create([
+        'company_id' => $company->id,
+        'sms_request_id' => $campaign->id,
+        'total_pesewas' => 18,
+        'subtotal_pesewas' => 18,
+        'issued_by' => $finance->id,
+    ]);
+
+    $payment = Payment::factory()->create([
+        'invoice_id' => $invoice->id,
+        'company_id' => $company->id,
+        'provider' => 'paystack',
+        'provider_reference' => 'inv1_xteg5luh1g',
+        'authorization_url' => 'https://checkout.paystack.com/old',
+        'amount_pesewas' => 18,
+        'momo_reference' => 'inv1_xteg5luh1g',
+        'submitted_by' => $user->id,
+    ]);
+
+    Http::fake([
+        'api.paystack.co/transaction/initialize' => Http::response([
+            'status' => true,
+            'message' => 'Authorization URL created',
+            'data' => [
+                'authorization_url' => 'https://checkout.paystack.com/new-checkout',
+                'access_code' => 'access_new',
+                'reference' => 'inv1_freshref99',
+            ],
+        ]),
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('invoices.pay', $invoice))
+        ->assertRedirect('https://checkout.paystack.com/new-checkout');
+
+    $payment->refresh();
+
+    expect($payment->provider_reference)->toBe('inv1_freshref99')
+        ->and($payment->provider_reference)->not->toBe('inv1_xteg5luh1g')
+        ->and(Payment::query()->where('invoice_id', $invoice->id)->count())->toBe(1);
+
+    Http::assertSent(function ($request) {
+        return $request->url() === 'https://api.paystack.co/transaction/initialize'
+            && $request['reference'] !== 'inv1_xteg5luh1g';
+    });
+});
+
 it('forbids support from issuing invoices', function () {
     [$user, $company] = $this->createApprovedCompanyOwner();
     $support = $this->createPlatformAdmin(PlatformRole::Support);
@@ -327,6 +390,7 @@ it('generates and downloads an invoice pdf on demand when missing', function () 
         'invoices.pdf',
         now()->addMinutes(30),
         ['invoice' => $invoice->id],
+        absolute: false,
     );
 
     $this->actingAs($user)

@@ -8,8 +8,10 @@ use App\Models\CompanyRate;
 use App\Models\SenderId;
 use App\Models\TaxRate;
 use App\Models\User;
+use App\Notifications\SenderIdApprovedNotification;
 use App\Support\Money;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesCompanies;
 use Tests\Concerns\RegistersVerifiedUsers;
@@ -189,6 +191,8 @@ it('allows an admin to approve a pending company', function () {
 });
 
 it('allows an admin to approve a pending sender id', function () {
+    Notification::fake();
+
     $admin = $this->createPlatformAdmin();
     [$owner, $company] = $this->createApprovedCompanyOwner();
 
@@ -203,6 +207,8 @@ it('allows an admin to approve a pending sender id', function () {
         ->assertRedirect();
 
     expect($senderId->fresh()->status)->toBe(SenderIdStatus::Approved);
+
+    Notification::assertSentTo($owner, SenderIdApprovedNotification::class);
 });
 
 it('lists sender ids across statuses with an optional status filter', function () {

@@ -37,7 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except(['show']);
 
     Route::get('sender-ids/{sender_id}/document', [SenderIdController::class, 'downloadDocument'])
-        ->middleware(['signed', 'throttle:downloads'])
+        ->middleware(['signed:relative', 'throttle:downloads'])
         ->name('sender-ids.document');
 
     Route::post('campaigns/estimate', [CampaignController::class, 'estimate'])
@@ -64,7 +64,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])
-        ->middleware(['signed', 'throttle:downloads'])
+        ->middleware(['signed:relative', 'throttle:downloads'])
         ->name('invoices.pdf');
     Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'startPaystack'])
         ->middleware(['company.approved', 'throttle:uploads'])
@@ -135,7 +135,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::post('fulfilment/{campaign}/fulfil', [FulfilmentController::class, 'markFulfilled'])
                     ->name('fulfilment.fulfil');
                 Route::get('fulfilment/{campaign}/recipients', [FulfilmentController::class, 'downloadRecipients'])
-                    ->middleware(['signed', 'throttle:downloads'])
+                    ->middleware(['signed:relative', 'throttle:downloads'])
                     ->name('fulfilment.recipients');
             });
 
@@ -166,7 +166,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::post('payments/{payment}/reject', [PaymentReviewController::class, 'reject'])
                     ->name('payments.reject');
                 Route::get('payments/{payment}/proof', [PaymentReviewController::class, 'downloadProof'])
-                    ->middleware(['signed', 'throttle:downloads'])
+                    ->middleware(['signed:relative', 'throttle:downloads'])
                     ->name('payments.proof');
             });
         });

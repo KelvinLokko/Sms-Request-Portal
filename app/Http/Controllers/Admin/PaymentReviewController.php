@@ -132,6 +132,7 @@ class PaymentReviewController extends Controller
                     'admin.payments.proof',
                     now()->addMinutes(30),
                     ['payment' => $payment->id],
+                    absolute: false,
                 )
                 : null,
             'created_at' => $payment->created_at?->toIso8601String(),

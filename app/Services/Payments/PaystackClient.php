@@ -32,7 +32,13 @@ class PaystackClient
             'reference' => $reference,
             'callback_url' => $callbackUrl,
             'metadata' => $metadata,
-        ])->throw();
+        ]);
+
+        if ($response->failed()) {
+            $message = (string) ($response->json('message') ?: 'Paystack checkout failed.');
+
+            throw new RuntimeException($message, $response->status());
+        }
 
         $data = $response->json('data');
 

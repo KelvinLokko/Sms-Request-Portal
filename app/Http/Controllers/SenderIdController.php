@@ -58,6 +58,7 @@ class SenderIdController extends Controller
                         'sender-ids.document',
                         now()->addMinutes(30),
                         ['sender_id' => $senderId->id],
+                        absolute: false,
                     )
                     : null,
             ]);

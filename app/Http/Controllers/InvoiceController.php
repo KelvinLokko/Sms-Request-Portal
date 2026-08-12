@@ -202,6 +202,7 @@ class InvoiceController extends Controller
             'invoices.pdf',
             now()->addMinutes(30),
             ['invoice' => $invoice->id],
+            absolute: false,
         );
     }
 }

@@ -71,26 +71,32 @@ class PaystackCheckout
                 ]);
             }
 
-            $reference = $existing?->provider_reference;
-            if ($reference === null || $reference === '') {
-                $reference = $this->uniqueReference($invoice);
-            }
-
+            // Always allocate a fresh Paystack reference. Reusing a pending
+            // reference causes "Duplicate Transaction Reference" on re-init.
+            $reference = $this->uniqueReference($invoice);
             $callbackUrl = route('invoices.payments.callback', $invoice);
 
-            $checkout = $this->paystack->initialize(
-                $email,
-                $invoice->total_pesewas,
-                $reference,
-                $callbackUrl,
-                [
-                    'invoice_id' => $invoice->id,
-                    'invoice_number' => $invoice->number,
-                    'company_id' => $invoice->company_id,
-                ],
-            );
+            try {
+                $checkout = $this->paystack->initialize(
+                    $email,
+                    $invoice->total_pesewas,
+                    $reference,
+                    $callbackUrl,
+                    [
+                        'invoice_id' => $invoice->id,
+                        'invoice_number' => $invoice->number,
+                        'company_id' => $invoice->company_id,
+                    ],
+                );
+            } catch (RuntimeException $e) {
+                throw ValidationException::withMessages([
+                    'payment' => 'Unable to start Paystack checkout. Please try again in a moment.',
+                ]);
+            }
 
             if ($existing !== null) {
+                $previousReference = $existing->provider_reference;
+
                 $existing->forceFill([
                     'amount_pesewas' => $invoice->total_pesewas,
                     'provider_reference' => $checkout['reference'],
@@ -101,6 +107,7 @@ class PaystackCheckout
 
                 $this->settlement->ledger($existing, 'paystack_reinitialized', $payer, [
                     'reference' => $checkout['reference'],
+                    'previous_reference' => $previousReference,
                 ]);
 
                 return $checkout['authorization_url'];

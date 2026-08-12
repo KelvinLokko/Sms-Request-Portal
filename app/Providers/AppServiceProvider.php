@@ -49,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::createAssetPathsUsing(fn (string $path): string => '/'.ltrim($path, '/'));
 
+        if (filled(config('app.url'))) {
+            URL::forceRootUrl(rtrim((string) config('app.url'), '/'));
+        }
+
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }

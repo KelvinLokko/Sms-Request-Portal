@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectSenderIdRequest;
 use App\Models\SenderId;
 use App\Services\ActivityLogger;
+use App\Services\CampaignNotifier;
 use App\Support\ListFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,6 +84,7 @@ class SenderIdReviewController extends Controller
                         'sender-ids.document',
                         now()->addMinutes(30),
                         ['sender_id' => $senderId->id],
+                        absolute: false,
                     )
                     : null,
             ]);
@@ -100,8 +102,11 @@ class SenderIdReviewController extends Controller
         ]);
     }
 
-    public function approve(SenderId $senderId, ActivityLogger $logger): RedirectResponse
-    {
+    public function approve(
+        SenderId $senderId,
+        ActivityLogger $logger,
+        CampaignNotifier $notifier,
+    ): RedirectResponse {
         $this->authorize('review', $senderId);
 
         $senderId->forceFill([
@@ -112,6 +117,7 @@ class SenderIdReviewController extends Controller
         ])->save();
 
         $logger->log('sender_id.approved', $senderId);
+        $notifier->senderIdApproved($senderId);
 
         return back()->with('success', "Sender ID \"{$senderId->value}\" approved.");
     }

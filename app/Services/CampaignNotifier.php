@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\PlatformPermission;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\SenderId;
 use App\Models\SmsRequest;
 use App\Models\User;
 use App\Notifications\CampaignFulfilledNotification;
@@ -12,6 +13,7 @@ use App\Notifications\CampaignSubmittedNotification;
 use App\Notifications\ChangesRequestedNotification;
 use App\Notifications\InvoiceReadyNotification;
 use App\Notifications\PaymentReceivedNotification;
+use App\Notifications\SenderIdApprovedNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
@@ -55,6 +57,17 @@ class CampaignNotifier
             $this->companyUsers($request->company_id),
             new CampaignFulfilledNotification($request),
         );
+    }
+
+    public function senderIdApproved(SenderId $senderId): void
+    {
+        $senderId->loadMissing('requester');
+
+        if ($senderId->requester === null) {
+            return;
+        }
+
+        $senderId->requester->notify(new SenderIdApprovedNotification($senderId));
     }
 
     /**

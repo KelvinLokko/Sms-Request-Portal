@@ -91,6 +91,7 @@ class FulfilmentController extends Controller
                     'admin.fulfilment.recipients',
                     now()->addMinutes(30),
                     ['campaign' => $campaign->id],
+                    absolute: false,
                 ),
             ],
             'can' => [
