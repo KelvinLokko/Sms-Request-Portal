@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectCompanyRequest;
 use App\Models\Company;
 use App\Services\ActivityLogger;
+use App\Services\CampaignNotifier;
 use App\Support\ListFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,8 +79,11 @@ class CompanyController extends Controller
         ]);
     }
 
-    public function approve(Company $company, ActivityLogger $logger): RedirectResponse
-    {
+    public function approve(
+        Company $company,
+        ActivityLogger $logger,
+        CampaignNotifier $notifier,
+    ): RedirectResponse {
         $this->authorize('approve', $company);
 
         $company->forceFill([
@@ -90,6 +94,7 @@ class CompanyController extends Controller
         ])->save();
 
         $logger->log('company.approved', $company);
+        $notifier->companyApproved($company);
 
         return back()->with('success', "{$company->name} has been approved.");
     }

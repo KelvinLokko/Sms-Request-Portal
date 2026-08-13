@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\PlatformPermission;
+use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\SenderId;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Notifications\CampaignFulfilledNotification;
 use App\Notifications\CampaignSubmittedNotification;
 use App\Notifications\ChangesRequestedNotification;
+use App\Notifications\CompanyApprovedNotification;
 use App\Notifications\InvoiceReadyNotification;
 use App\Notifications\PaymentReceivedNotification;
 use App\Notifications\SenderIdApprovedNotification;
@@ -68,6 +70,14 @@ class CampaignNotifier
         }
 
         $senderId->requester->notify(new SenderIdApprovedNotification($senderId));
+    }
+
+    public function companyApproved(Company $company): void
+    {
+        Notification::send(
+            $this->companyUsers($company->id),
+            new CompanyApprovedNotification($company),
+        );
     }
 
     /**

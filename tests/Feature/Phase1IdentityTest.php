@@ -8,6 +8,7 @@ use App\Models\CompanyRate;
 use App\Models\SenderId;
 use App\Models\TaxRate;
 use App\Models\User;
+use App\Notifications\CompanyApprovedNotification;
 use App\Notifications\SenderIdApprovedNotification;
 use App\Support\Money;
 use Illuminate\Http\UploadedFile;
@@ -179,8 +180,12 @@ it('forbids editing approved or rejected sender ids', function () {
 });
 
 it('allows an admin to approve a pending company', function () {
+    Notification::fake();
+
     $admin = $this->createPlatformAdmin();
-    $company = Company::factory()->create(['status' => CompanyStatus::Pending]);
+    [$owner, $company] = $this->createCompanyOwner([
+        'status' => CompanyStatus::Pending,
+    ]);
 
     $this->actingAs($admin)
         ->post(route('admin.companies.approve', $company))
@@ -188,6 +193,8 @@ it('allows an admin to approve a pending company', function () {
 
     expect($company->fresh()->status)->toBe(CompanyStatus::Approved)
         ->and($company->fresh()->approved_by)->toBe($admin->id);
+
+    Notification::assertSentTo($owner, CompanyApprovedNotification::class);
 });
 
 it('allows an admin to approve a pending sender id', function () {
