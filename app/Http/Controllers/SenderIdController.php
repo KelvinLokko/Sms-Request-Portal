@@ -7,6 +7,7 @@ use App\Http\Requests\SenderIds\StoreSenderIdRequest;
 use App\Http\Requests\SenderIds\UpdateSenderIdRequest;
 use App\Models\SenderId;
 use App\Services\ActivityLogger;
+use App\Services\CampaignNotifier;
 use App\Support\ListFilters;
 use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
@@ -87,8 +88,11 @@ class SenderIdController extends Controller
         return redirect()->route('sender-ids.index');
     }
 
-    public function store(StoreSenderIdRequest $request, ActivityLogger $logger): RedirectResponse
-    {
+    public function store(
+        StoreSenderIdRequest $request,
+        ActivityLogger $logger,
+        CampaignNotifier $notifier,
+    ): RedirectResponse {
         $user = $request->user();
         $companyId = $user->currentCompanyId();
 
@@ -121,6 +125,7 @@ class SenderIdController extends Controller
         $logger->log('sender_id.created', $senderId, [
             'value' => $senderId->value,
         ]);
+        $notifier->senderIdRequested($senderId);
 
         return redirect()
             ->route('sender-ids.index')
@@ -146,6 +151,7 @@ class SenderIdController extends Controller
         UpdateSenderIdRequest $request,
         SenderId $senderId,
         ActivityLogger $logger,
+        CampaignNotifier $notifier,
     ): RedirectResponse {
         $companyId = $senderId->company_id;
 
@@ -179,6 +185,7 @@ class SenderIdController extends Controller
         $logger->log('sender_id.updated', $senderId, [
             'value' => $senderId->value,
         ]);
+        $notifier->senderIdRequested($senderId);
 
         return redirect()
             ->route('sender-ids.index')

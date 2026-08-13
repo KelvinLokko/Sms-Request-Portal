@@ -10,7 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class PaymentReceivedNotification extends Notification implements ShouldQueue
+class PaymentVerifiedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
     use RoutesSupportChannels;
@@ -25,52 +25,37 @@ class PaymentReceivedNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return $this->channelsFor($notifiable);
+        return $this->channelsFor($notifiable, includeDatabase: false);
     }
 
     public function toMail(object $notifiable): MailMessage
     {
-        $payment = $this->payment->loadMissing(['invoice', 'company']);
+        $payment = $this->payment->loadMissing(['invoice.smsRequest', 'company']);
         $reference = $payment->provider_reference
             ?? $payment->momo_reference
             ?? '—';
 
         return (new MailMessage)
-            ->subject('Payment submitted: '.$payment->invoice->number)
-            ->line("{$payment->company->name} submitted a payment for {$payment->invoice->number}.")
+            ->subject('Payment confirmed: '.$payment->invoice->number)
+            ->line('An invoice payment has been confirmed successfully.')
+            ->line('Company: '.($payment->company->name ?? '—'))
+            ->line('Invoice: '.$payment->invoice->number)
+            ->line('Campaign: '.($payment->invoice->smsRequest->reference ?? '—'))
             ->line('Amount: '.Money::format($payment->amount_pesewas))
             ->line('Provider: '.$payment->provider)
             ->line('Reference: '.$reference)
             ->action('Open payments', url(route('admin.payments.index')));
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
-    {
-        return [
-            'type' => 'payment.received',
-            'payment_id' => $this->payment->id,
-            'invoice_id' => $this->payment->invoice_id,
-            'amount_pesewas' => $this->payment->amount_pesewas,
-            'momo_reference' => $this->payment->momo_reference,
-        ];
-    }
-
     public function toTelegram(object $notifiable): string
     {
         $payment = $this->payment->loadMissing(['invoice', 'company']);
-        $reference = $payment->provider_reference
-            ?? $payment->momo_reference
-            ?? '—';
 
         return sprintf(
-            "Payment received\n%s · %s\n%s · %s",
-            $payment->company->name,
+            "Payment confirmed\n%s · %s\n%s",
+            $payment->company->name ?? '',
             $payment->invoice->number,
             Money::format($payment->amount_pesewas),
-            $reference,
         );
     }
 }

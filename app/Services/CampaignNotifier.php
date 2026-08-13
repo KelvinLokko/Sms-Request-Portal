@@ -13,20 +13,38 @@ use App\Notifications\CampaignFulfilledNotification;
 use App\Notifications\CampaignSubmittedNotification;
 use App\Notifications\ChangesRequestedNotification;
 use App\Notifications\CompanyApprovedNotification;
+use App\Notifications\CompanyRegisteredNotification;
 use App\Notifications\InvoiceReadyNotification;
 use App\Notifications\PaymentReceivedNotification;
+use App\Notifications\PaymentVerifiedNotification;
 use App\Notifications\SenderIdApprovedNotification;
+use App\Notifications\SenderIdRequestedNotification;
+use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 class CampaignNotifier
 {
+    public function companyRegistered(Company $company): void
+    {
+        $this->notifySupport(new CompanyRegisteredNotification($company));
+    }
+
+    public function senderIdRequested(SenderId $senderId): void
+    {
+        $this->notifySupport(new SenderIdRequestedNotification($senderId));
+    }
+
     public function submitted(SmsRequest $request): void
     {
+        $notification = new CampaignSubmittedNotification($request);
+
         Notification::send(
             $this->staffWith(PlatformPermission::CampaignsReview),
-            new CampaignSubmittedNotification($request),
+            $notification,
         );
+
+        $this->notifySupport(new CampaignSubmittedNotification($request));
     }
 
     public function changesRequested(SmsRequest $request): void
@@ -47,10 +65,19 @@ class CampaignNotifier
 
     public function paymentReceived(Payment $payment): void
     {
+        $notification = new PaymentReceivedNotification($payment);
+
         Notification::send(
             $this->staffWith(PlatformPermission::PaymentsManage),
-            new PaymentReceivedNotification($payment),
+            $notification,
         );
+
+        $this->notifySupport(new PaymentReceivedNotification($payment));
+    }
+
+    public function paymentVerified(Payment $payment): void
+    {
+        $this->notifySupport(new PaymentVerifiedNotification($payment));
     }
 
     public function fulfilled(SmsRequest $request): void
@@ -78,6 +105,17 @@ class CampaignNotifier
             $this->companyUsers($company->id),
             new CompanyApprovedNotification($company),
         );
+    }
+
+    private function notifySupport(BaseNotification $notification): void
+    {
+        $email = config('notifications.support.email');
+
+        if (! is_string($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        Notification::route('mail', $email)->notify($notification);
     }
 
     /**

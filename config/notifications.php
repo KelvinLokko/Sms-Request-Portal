@@ -4,6 +4,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Support inbox
+    |--------------------------------------------------------------------------
+    |
+    | Operational alerts (new registrations, sender IDs, campaigns, payments)
+    | are emailed here in addition to any role-based staff notifications.
+    | Defaults to the public marketing contact address.
+    |
+    */
+
+    'support' => [
+        'email' => env(
+            'SUPPORT_EMAIL',
+            env('MARKETING_CONTACT_EMAIL', 'support@smsbulkportal.com'),
+        ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Optional Telegram alerts
     |--------------------------------------------------------------------------
     |

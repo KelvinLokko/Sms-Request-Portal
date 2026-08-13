@@ -8,6 +8,7 @@ use App\Enums\CompanyStatus;
 use App\Enums\CompanyUserRole;
 use App\Models\Company;
 use App\Models\User;
+use App\Services\CampaignNotifier;
 use App\Services\RegistrationOtpService;
 use App\Services\Turnstile;
 use App\Support\Honeypot;
@@ -81,6 +82,10 @@ class CreateNewUser implements CreatesNewUsers
             ])->save();
 
             $company->attachUser($user, CompanyUserRole::Owner);
+
+            DB::afterCommit(
+                fn () => app(CampaignNotifier::class)->companyRegistered($company),
+            );
 
             return $user->fresh();
         });

@@ -11,6 +11,7 @@ use App\Models\PaymentTransaction;
 use App\Models\SmsRequest;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\CampaignNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +19,7 @@ class PaymentSettlement
 {
     public function __construct(
         private ActivityLogger $logger,
+        private CampaignNotifier $notifier,
     ) {}
 
     /**
@@ -99,6 +101,10 @@ class PaymentSettlement
                 'invoice_before' => $beforeInvoice,
                 'invoice_after' => ['status' => $invoice->status->value],
             ], $actor);
+
+            DB::afterCommit(
+                fn () => $this->notifier->paymentVerified($locked->fresh()),
+            );
 
             return $locked;
         });

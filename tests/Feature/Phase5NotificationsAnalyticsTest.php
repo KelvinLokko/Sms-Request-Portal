@@ -4,15 +4,22 @@ use App\Enums\PlatformRole;
 use App\Enums\SmsRequestStatus;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\ProviderRate;
+use App\Models\SenderId;
 use App\Models\SmsRequest;
 use App\Notifications\CampaignSubmittedNotification;
 use App\Notifications\ChangesRequestedNotification;
+use App\Notifications\CompanyRegisteredNotification;
 use App\Notifications\InvoiceReadyNotification;
+use App\Notifications\PaymentReceivedNotification;
+use App\Notifications\PaymentVerifiedNotification;
+use App\Notifications\SenderIdRequestedNotification;
 use App\Services\AnalyticsService;
 use App\Services\CampaignNotifier;
 use App\Services\CampaignReviewService;
 use App\Services\InvoiceService;
+use App\Services\Payments\PaymentSettlement;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\CreatesCompanies;
@@ -21,6 +28,39 @@ uses(CreatesCompanies::class);
 
 beforeEach(function () {
     $this->withoutVite();
+    config(['notifications.support.email' => 'support@smsbulkportal.com']);
+});
+
+it('emails the support inbox when a company registers', function () {
+    Notification::fake();
+
+    $company = \App\Models\Company::factory()->create([
+        'name' => 'Support Alert Co',
+        'email' => 'owner@support-alert.test',
+    ]);
+
+    app(CampaignNotifier::class)->companyRegistered($company);
+
+    Notification::assertSentOnDemand(
+        CompanyRegisteredNotification::class,
+        fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === 'support@smsbulkportal.com'
+            && $notification->company->is($company),
+    );
+});
+
+it('emails the support inbox when a sender id is requested', function () {
+    Notification::fake();
+
+    [$user, $company] = $this->createApprovedCompanyOwner();
+    $senderId = SenderId::factory()->create([
+        'company_id' => $company->id,
+        'requested_by' => $user->id,
+        'value' => 'SupportSID',
+    ]);
+
+    app(CampaignNotifier::class)->senderIdRequested($senderId);
+
+    Notification::assertSentOnDemand(SenderIdRequestedNotification::class);
 });
 
 it('notifies platform staff when a campaign is submitted', function () {
@@ -41,6 +81,44 @@ it('notifies platform staff when a campaign is submitted', function () {
     app(CampaignNotifier::class)->submitted($campaign->fresh());
 
     Notification::assertSentTo($admin, CampaignSubmittedNotification::class);
+    Notification::assertSentOnDemand(CampaignSubmittedNotification::class);
+});
+
+it('emails support when a payment is submitted and when it is verified', function () {
+    Notification::fake();
+
+    [$user, $company] = $this->createApprovedCompanyOwner();
+    $finance = $this->createPlatformAdmin(PlatformRole::Finance);
+
+    $campaign = SmsRequest::factory()->submitted()->create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'status' => SmsRequestStatus::Invoiced,
+    ]);
+
+    $invoice = Invoice::factory()->create([
+        'company_id' => $company->id,
+        'sms_request_id' => $campaign->id,
+        'issued_by' => $finance->id,
+        'total_pesewas' => 300,
+        'subtotal_pesewas' => 300,
+    ]);
+
+    $payment = Payment::factory()->create([
+        'invoice_id' => $invoice->id,
+        'company_id' => $company->id,
+        'amount_pesewas' => 300,
+        'submitted_by' => $user->id,
+        'provider' => 'paystack',
+        'provider_reference' => 'ref_support_test',
+    ]);
+
+    app(CampaignNotifier::class)->paymentReceived($payment);
+    Notification::assertSentTo($finance, PaymentReceivedNotification::class);
+    Notification::assertSentOnDemand(PaymentReceivedNotification::class);
+
+    app(PaymentSettlement::class)->markVerified($payment, $finance);
+    Notification::assertSentOnDemand(PaymentVerifiedNotification::class);
 });
 
 it('notifies company users when changes are requested', function () {

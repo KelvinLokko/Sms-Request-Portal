@@ -3,7 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\SmsRequest;
-use App\Notifications\Channels\TelegramChannel;
+use App\Notifications\Concerns\RoutesSupportChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -12,6 +12,7 @@ use Illuminate\Notifications\Notification;
 class CampaignSubmittedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RoutesSupportChannels;
 
     public function __construct(public SmsRequest $smsRequest)
     {
@@ -23,13 +24,7 @@ class CampaignSubmittedNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        $channels = ['mail', 'database'];
-
-        if (config('notifications.telegram.enabled')) {
-            $channels[] = TelegramChannel::class;
-        }
-
-        return $channels;
+        return $this->channelsFor($notifiable);
     }
 
     public function toMail(object $notifiable): MailMessage
