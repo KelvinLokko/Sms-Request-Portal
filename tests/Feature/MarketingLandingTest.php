@@ -81,7 +81,10 @@ it('serves sitemap.xml with home login and register urls', function () {
 
     $response->assertOk()
         ->assertHeader('Content-Type', 'application/xml; charset=UTF-8')
-        ->assertSee(route('home'), false)
-        ->assertSee(route('login'), false)
-        ->assertSee(route('register'), false);
+        ->assertSee('<?xml version="1.0" encoding="UTF-8"?>', false)
+        ->assertSee('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', false)
+        ->assertSee(url('/'), false)
+        ->assertSee(url('/login'), false)
+        ->assertSee(url('/register'), false)
+        ->assertDontSee('<html', false);
 });

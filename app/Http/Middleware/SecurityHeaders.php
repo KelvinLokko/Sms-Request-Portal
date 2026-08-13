@@ -23,7 +23,12 @@ class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
-        $response->headers->set('Content-Security-Policy', $this->contentSecurityPolicy());
+
+        // Keep crawler documents (sitemap/robots) free of HTML CSP so Google
+        // does not treat an error/challenge page as the sitemap itself.
+        if (! $request->is('sitemap.xml', 'robots.txt')) {
+            $response->headers->set('Content-Security-Policy', $this->contentSecurityPolicy());
+        }
 
         if (app()->isProduction()) {
             $response->headers->set(
