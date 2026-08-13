@@ -24,7 +24,7 @@ return [
     ),
 
     'contact' => [
-        'email' => env('MARKETING_CONTACT_EMAIL', 'hello@example.com'),
+        'email' => env('MARKETING_CONTACT_EMAIL', 'support@smsbulkportal.com'),
         'phone' => env('MARKETING_CONTACT_PHONE', ''),
     ],
 
