@@ -46,6 +46,10 @@ RUN npm ci
 COPY . .
 RUN mkdir -p bootstrap/cache storage/framework/{cache,sessions,views} storage/logs \
     && cp .env.example .env \
+    # Never bake a build-time host into Wayfinder/Inertia route helpers. Docker
+    # uses .env.example (APP_URL=http://localhost); absolute localhost URLs in
+    # the JS bundle break production form posts under CSP connect-src 'self'.
+    && sed -i 's|^APP_URL=.*|APP_URL=|' .env \
     && php artisan package:discover --ansi \
     && php artisan wayfinder:generate \
     && npm run build \

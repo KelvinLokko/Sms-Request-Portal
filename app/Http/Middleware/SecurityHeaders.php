@@ -40,8 +40,18 @@ class SecurityHeaders
      */
     protected function contentSecurityPolicy(): string
     {
-        $scriptSrc = ["'self'", "'unsafe-inline'", 'https://challenges.cloudflare.com'];
-        $connectSrc = ["'self'", 'https://challenges.cloudflare.com'];
+        $scriptSrc = [
+            "'self'",
+            "'unsafe-inline'",
+            'https://challenges.cloudflare.com',
+            'https://static.cloudflareinsights.com',
+        ];
+        $connectSrc = [
+            "'self'",
+            'https://challenges.cloudflare.com',
+            'https://cloudflareinsights.com',
+            'https://*.cloudflareinsights.com',
+        ];
         $frameSrc = ['https://challenges.cloudflare.com'];
 
         if (! app()->isProduction()) {
@@ -63,7 +73,8 @@ class SecurityHeaders
             'frame-src '.implode(' ', $frameSrc),
             "frame-ancestors 'none'",
             "base-uri 'self'",
-            "form-action 'self'",
+            // Allow Paystack hosted checkout redirects from native form posts.
+            "form-action 'self' https://checkout.paystack.com https://*.paystack.co",
         ];
 
         return implode('; ', $directives);

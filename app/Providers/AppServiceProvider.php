@@ -49,10 +49,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::createAssetPathsUsing(fn (string $path): string => '/'.ltrim($path, '/'));
 
-        if (filled(config('app.url'))) {
-            URL::forceRootUrl(rtrim((string) config('app.url'), '/'));
-        }
-
+        // Prefer HTTPS URL generation when the configured app URL is secure.
+        // Do not forceRootUrl() here — a wrong APP_URL (e.g. localhost on a
+        // live host) would rewrite Inertia redirects and break forms/CSP.
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
