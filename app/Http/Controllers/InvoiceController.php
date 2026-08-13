@@ -140,12 +140,13 @@ class InvoiceController extends Controller
     public function startPaystack(
         Invoice $invoice,
         PaystackCheckout $checkout,
-    ): RedirectResponse {
+    ): \Symfony\Component\HttpFoundation\Response {
         $this->authorize('pay', $invoice);
 
         $url = $checkout->start($invoice, request()->user());
 
-        return redirect()->away($url);
+        // Full-page visit to Paystack (Inertia XHR cannot follow external checkout).
+        return Inertia::location($url);
     }
 
     public function paystackCallback(
