@@ -4,6 +4,9 @@ import { computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { index as analyticsIndex } from '@/routes/admin/analytics';
+import { index as adminCampaignsIndex } from '@/routes/admin/campaigns';
+import { index as fulfilmentIndex } from '@/routes/admin/fulfilment';
+import { index as paymentsIndex } from '@/routes/admin/payments';
 import {
     create as campaignsCreate,
     index as campaignsIndex,
@@ -105,6 +108,9 @@ function formatDate(value: string | null): string {
         year: 'numeric',
     });
 }
+
+const kpiCardClass =
+    'surface-panel block p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 </script>
 
 <template>
@@ -161,7 +167,10 @@ function formatDate(value: string | null): string {
             v-if="isStaff && summary"
             class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            <Link
+                :href="adminCampaignsIndex({ query: { status: 'submitted' } })"
+                :class="kpiCardClass"
+            >
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -170,8 +179,8 @@ function formatDate(value: string | null): string {
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
                     {{ summary.pending_review }}
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="fulfilmentIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -180,8 +189,8 @@ function formatDate(value: string | null): string {
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
                     {{ summary.awaiting_fulfilment }}
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="paymentsIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -190,8 +199,13 @@ function formatDate(value: string | null): string {
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
                     {{ summary.pending_payments }}
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link
+                :href="
+                    adminCampaignsIndex({ query: { status: 'fulfilled' } })
+                "
+                :class="kpiCardClass"
+            >
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -200,8 +214,8 @@ function formatDate(value: string | null): string {
                 <p class="mt-2 text-2xl font-semibold tracking-tight">
                     {{ summary.fulfilled }}
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="analyticsIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -213,8 +227,8 @@ function formatDate(value: string | null): string {
                 <p class="mt-1 text-xs text-muted-foreground">
                     Paid invoice subtotals (ex-tax)
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="analyticsIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -231,8 +245,8 @@ function formatDate(value: string | null): string {
                             : 'not set'
                     }}
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="analyticsIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -254,8 +268,8 @@ function formatDate(value: string | null): string {
                         · {{ summary.margin_percent }}% margin
                     </span>
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="analyticsIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -267,7 +281,7 @@ function formatDate(value: string | null): string {
                 <p class="mt-1 text-xs text-muted-foreground">
                     Paid invoice total {{ summary.revenue }}
                 </p>
-            </div>
+            </Link>
         </div>
 
         <div
@@ -289,7 +303,7 @@ function formatDate(value: string | null): string {
             v-if="!isStaff && stats"
             class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            <Link :href="campaignsIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -301,8 +315,11 @@ function formatDate(value: string | null): string {
                 <p class="mt-1 text-xs text-muted-foreground">
                     {{ stats.drafts }} draft{{ stats.drafts === 1 ? '' : 's' }}
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link
+                :href="campaignsIndex({ query: { status: 'fulfilled' } })"
+                :class="kpiCardClass"
+            >
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -314,8 +331,8 @@ function formatDate(value: string | null): string {
                 <p class="mt-1 text-xs text-muted-foreground">
                     {{ stats.sms_volume.toLocaleString() }} SMS billed
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="invoicesIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -327,8 +344,8 @@ function formatDate(value: string | null): string {
                 <p class="mt-1 text-xs text-muted-foreground">
                     {{ stats.open_invoice_total }} outstanding
                 </p>
-            </div>
-            <div class="surface-panel p-4 transition-shadow hover:shadow-md">
+            </Link>
+            <Link :href="senderIdsIndex()" :class="kpiCardClass">
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
@@ -340,7 +357,7 @@ function formatDate(value: string | null): string {
                 <p class="mt-1 text-xs text-muted-foreground">
                     {{ stats.pending_sender_ids }} pending approval
                 </p>
-            </div>
+            </Link>
         </div>
 
         <!-- Company recent activity -->

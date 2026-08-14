@@ -38,7 +38,9 @@ it('shows a pricing calculator using the platform default rate', function () {
         ->assertSee('Estimate your campaign cost', false)
         ->assertSee('data-pricing-calculator', false)
         ->assertSee('data-rate="0.030000"', false)
-        ->assertSee('GHS / page', false);
+        ->assertSee('Estimated cost', false)
+        ->assertDontSee('Platform rate', false)
+        ->assertDontSee('GHS / page', false);
 });
 
 it('points every public call to action at registration for guests', function () {

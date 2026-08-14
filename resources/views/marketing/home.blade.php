@@ -600,20 +600,7 @@
                         @endif
                     >
                         @if ($platformRatePerSms)
-                            <div class="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
-                                <div>
-                                    <p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                        Platform rate
-                                    </p>
-                                    <p class="mt-1 font-mono text-2xl font-semibold text-ink">
-                                        {{ rtrim(rtrim($platformRatePerSms, '0'), '.') }}
-                                        <span class="text-sm font-normal text-muted-foreground">GHS / page</span>
-                                    </p>
-                                </div>
-                                <p class="text-xs text-muted-foreground">Indicative estimate</p>
-                            </div>
-
-                            <form class="mt-6 grid gap-5" data-pricing-form onsubmit="return false;">
+                            <form class="grid gap-5" data-pricing-form onsubmit="return false;">
                                 <div class="grid gap-2">
                                     <label for="pricing-recipients" class="text-sm font-medium text-ink">
                                         Number of recipients
