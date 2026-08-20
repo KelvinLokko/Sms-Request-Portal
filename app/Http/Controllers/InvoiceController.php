@@ -8,14 +8,12 @@ use App\Services\InvoicePdfService;
 use App\Services\Payments\PaystackCheckout;
 use App\Support\ListFilters;
 use App\Support\Money;
-use App\Support\PrivateStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
 {
@@ -122,19 +120,17 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function downloadPdf(Invoice $invoice, InvoicePdfService $pdfs): StreamedResponse
+    public function downloadPdf(Invoice $invoice, InvoicePdfService $pdfs): \Illuminate\Http\Response
     {
         $this->authorize('download', $invoice);
 
-        $path = $pdfs->ensure($invoice);
+        $bytes = $pdfs->contents($invoice);
 
-        abort_unless(PrivateStorage::disk()->exists($path), 404);
-
-        return PrivateStorage::disk()->download(
-            $path,
-            $invoice->number.'.pdf',
-            ['Content-Type' => 'application/pdf'],
-        );
+        return response($bytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$invoice->number.'.pdf"',
+            'Content-Length' => (string) strlen($bytes),
+        ]);
     }
 
     public function startPaystack(
@@ -201,7 +197,7 @@ class InvoiceController extends Controller
     {
         return URL::temporarySignedRoute(
             'invoices.pdf',
-            now()->addMinutes(30),
+            now()->addHours(2),
             ['invoice' => $invoice->id],
             absolute: false,
         );

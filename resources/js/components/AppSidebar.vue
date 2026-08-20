@@ -139,7 +139,7 @@ const navGroups = computed<NavGroup[]>(() => {
     }
     if (can('admin.access')) {
         operations.push({
-            title: 'Campaign review',
+            title: 'Campaigns',
             href: adminCampaigns(),
             icon: ClipboardCheck,
         });

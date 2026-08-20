@@ -24,17 +24,26 @@ class CampaignReviewController extends Controller
 
         $filters = ListFilters::fromRequest($request);
         $status = $filters['status'] ?? '';
-        $allowed = [
+        $allowed = array_map(
+            fn (SmsRequestStatus $case) => $case->value,
+            SmsRequestStatus::cases(),
+        );
+        $needsReview = [
             SmsRequestStatus::Submitted->value,
             SmsRequestStatus::UnderReview->value,
         ];
+        $filterNeedsReview = $status === 'needs_review';
+        $filterStatus = in_array($status, $allowed, true) ? $status : null;
 
         $campaigns = SmsRequest::query()
             ->with(['company:id,name', 'senderId:id,value', 'creator:id,name,email'])
             ->when(
-                in_array($status, $allowed, true),
-                fn ($q) => $q->where('status', $status),
-                fn ($q) => $q->whereIn('status', $allowed),
+                $filterNeedsReview,
+                fn ($q) => $q->whereIn('status', $needsReview),
+            )
+            ->when(
+                $filterStatus !== null,
+                fn ($q) => $q->where('status', $filterStatus),
             )
             ->tap(fn ($query) => ListFilters::applyDateRange(
                 $query,
@@ -54,7 +63,7 @@ class CampaignReviewController extends Controller
                     });
                 },
             )
-            ->latest('submitted_at')
+            ->latest('id')
             ->paginate(20)
             ->withQueryString()
             ->through(fn (SmsRequest $campaign) => [
@@ -81,17 +90,20 @@ class CampaignReviewController extends Controller
             'campaigns' => $campaigns,
             'filters' => [
                 ...$filters,
-                'status' => in_array($status, $allowed, true) ? $status : null,
+                'status' => $filterNeedsReview ? 'needs_review' : $filterStatus,
             ],
             'statusOptions' => [
                 [
-                    'value' => SmsRequestStatus::Submitted->value,
-                    'label' => SmsRequestStatus::Submitted->label(),
+                    'value' => 'needs_review',
+                    'label' => 'Needs review',
                 ],
-                [
-                    'value' => SmsRequestStatus::UnderReview->value,
-                    'label' => SmsRequestStatus::UnderReview->label(),
-                ],
+                ...collect(SmsRequestStatus::cases())
+                    ->map(fn (SmsRequestStatus $status) => [
+                        'value' => $status->value,
+                        'label' => $status->label(),
+                    ])
+                    ->values()
+                    ->all(),
             ],
         ]);
     }

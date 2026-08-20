@@ -37,7 +37,7 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Campaign review', href: index() }],
+        breadcrumbs: [{ title: 'Campaigns', href: index() }],
     },
 });
 
@@ -71,12 +71,12 @@ function formatDate(value: string | null): string {
 </script>
 
 <template>
-    <Head title="Campaign review" />
+    <Head title="Campaigns" />
 
     <div class="flex flex-col gap-6 p-4">
         <Heading
-            title="Campaign review"
-            description="Review submitted campaigns, request changes, reject blocked content, or issue an invoice."
+            title="Campaigns"
+            description="Full campaign history. Filter by status, or choose Needs review for the live queue."
         />
 
         <ListFilterBar

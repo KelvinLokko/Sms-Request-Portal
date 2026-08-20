@@ -332,3 +332,54 @@ it('flags unicode campaigns for manual cost review on submit', function () {
 
     expect($campaign->fresh()->requires_manual_cost_review)->toBeTrue();
 });
+
+it('lets staff browse the full campaign history including rejected records', function () {
+    [$user, $company] = $this->createApprovedCompanyOwner();
+    $admin = $this->createPlatformAdmin();
+
+    $rejected = SmsRequest::factory()->create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'status' => SmsRequestStatus::Rejected,
+        'submitted_at' => now()->subDay(),
+        'name' => 'Rejected history campaign',
+    ]);
+    SmsRequest::factory()->create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'status' => SmsRequestStatus::Fulfilled,
+        'submitted_at' => now()->subHours(2),
+        'name' => 'Fulfilled history campaign',
+    ]);
+    SmsRequest::factory()->submitted()->create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'status' => SmsRequestStatus::Submitted,
+        'name' => 'Needs review campaign',
+    ]);
+
+    $this->actingAs($admin)
+        ->withoutVite()
+        ->get(route('admin.campaigns.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/campaigns/Index')
+            ->has('campaigns.data', 3)
+            ->where('campaigns.data.0.name', 'Needs review campaign'));
+
+    $this->actingAs($admin)
+        ->withoutVite()
+        ->get(route('admin.campaigns.index', ['status' => 'rejected']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('campaigns.data', 1)
+            ->where('campaigns.data.0.id', $rejected->id));
+
+    $this->actingAs($admin)
+        ->withoutVite()
+        ->get(route('admin.campaigns.index', ['status' => 'needs_review']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('campaigns.data', 1)
+            ->where('campaigns.data.0.name', 'Needs review campaign'));
+});

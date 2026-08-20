@@ -167,7 +167,12 @@ const kpiCardClass =
             v-if="isStaff && summary"
             class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
-            <Link :href="adminCampaignsIndex()" :class="kpiCardClass">
+            <Link
+                :href="
+                    adminCampaignsIndex({ query: { status: 'needs_review' } })
+                "
+                :class="kpiCardClass"
+            >
                 <p
                     class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
