@@ -11,7 +11,9 @@ return [
     |
     */
 
-    'brand' => env('MARKETING_BRAND', env('APP_NAME', 'smsbulkportal')),
+    // Keep brand independent of APP_NAME so stale production APP_NAME values
+    // (e.g. "SMS Client Portal") do not leak into OG titles / link previews.
+    'brand' => env('MARKETING_BRAND', 'smsbulkportal'),
 
     'tagline' => env(
         'MARKETING_TAGLINE',
